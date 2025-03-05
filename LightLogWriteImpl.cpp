@@ -31,7 +31,7 @@ public:
 		bIsStopLogging{ false },
 		bHasLogLasting{ false }
 	{
-		sWritedThreads = std::thread(&LightLogWrite_Impl::RunWriteThread, this);
+		sWritedThreads = std::jthread(&LightLogWrite_Impl::RunWriteThread, this);
 	}
 
 	void CreateLogsFile();
@@ -42,7 +42,8 @@ private:
 			LightLogWrite_Info sLogMessageInf;
 			{
 
-				std::unique_lock<std::mutex> sLock(pLogWriteMutex);
+				//std::unique_lock<std::mutex> sLock(pLogWriteMutex);
+				auto sLock = std::unique_lock<std::mutex>(pLogWriteMutex);
 				pWritedCondVar.wait(sLock, [this] {return !pLogWriteQueue.empty() || bIsStopLogging; });
 				if (bIsStopLogging && pLogWriteQueue.empty()) break;//如果停止标志为真且队列为空，则退出线程
 				if (!pLogWriteQueue.empty()) {
@@ -71,7 +72,7 @@ private:
 
 	}
 
-	std::wstring GetCurrentTimer()const {
+	std::wstring GetCurrentTimer() const {
 		std::tm				sTmPartsInfo = GetCurrsTimerTm();
 		std::wostringstream sWosStrStream;
 		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y-%m-%d %H:%M:%S");
@@ -86,7 +87,7 @@ private:
 #ifdef _WIN32
 		localtime_s(&sCurrTmDatas, &sCurrTimerTm);
 #else
-		localtime_r(&sCurrTimerTm, &sCurrTmDatas);
+		localtime_r(&sCurrTmDatas, &sCurrTimerTm);
 #endif
 		return sCurrTmDatas;
 	}
@@ -95,7 +96,8 @@ private:
 	std::mutex							pLogWriteMutex;	// 日志写入锁
 	std::queue<LightLogWrite_Info>		pLogWriteQueue;	// 日志消息队列
 	std::condition_variable				pWritedCondVar;	// 条件变量
-	std::thread							sWritedThreads;	// 日志处理线程
+	//change to jthread
+	std::jthread						sWritedThreads;	// 日志处理线程
 	std::atomic<bool>					bIsStopLogging;	// 停止标志
 	std::wstring						sLogLastingDir;	// 持久化日志路径
 	std::wstring						sLogsBasedName; // 持久化日志选项
@@ -109,4 +111,3 @@ int main()
 	
     std::cout << "Hello World!\n";
 }
-
