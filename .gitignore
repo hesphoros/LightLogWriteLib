@@ -1,0 +1,19 @@
+# C++ objects and libs
+*.slo
+*.lo
+*.o
+*.a
+*.la
+*.lai
+*.so
+*.so.*
+*.dll
+*.dylib
+
+.vs/
+.vscode/
+build/
+x64/
+Debug/
+Release/
+third/
