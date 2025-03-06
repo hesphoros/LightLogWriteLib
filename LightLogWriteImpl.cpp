@@ -30,11 +30,19 @@ public:
 	LightLogWrite_Impl() :
 		bIsStopLogging{ false },
 		bHasLogLasting{ false }
+		
 	{
-		sWritedThreads = std::jthread(&LightLogWrite_Impl::RunWriteThread, this);
+		sWritedThreads = std::thread(&LightLogWrite_Impl::RunWriteThread, this);
 	}
 
 	void CreateLogsFile();
+	void WriteLogContent();
+	void CloseLogStream() {
+		bIsStopLogging = true;
+		pWritedCondVar.notify_all();
+		WriteLogContent(L"Stop log write thread", L"================================>");
+		if (sWritedThreads.joinable()) sWritedThreads.join();//等待线程结束
+	}
 private:
 	void RunWriteThread() {
 		while (true) {
@@ -42,7 +50,7 @@ private:
 			LightLogWrite_Info sLogMessageInf;
 			{
 
-				//std::unique_lock<std::mutex> sLock(pLogWriteMutex);
+				
 				auto sLock = std::unique_lock<std::mutex>(pLogWriteMutex);
 				pWritedCondVar.wait(sLock, [this] {return !pLogWriteQueue.empty() || bIsStopLogging; });
 				if (bIsStopLogging && pLogWriteQueue.empty()) break;//如果停止标志为真且队列为空，则退出线程
@@ -92,22 +100,22 @@ private:
 		return sCurrTmDatas;
 	}
 
-	std::wofstream						pLogFileStream;	// 日志文件流
-	std::mutex							pLogWriteMutex;	// 日志写入锁
-	std::queue<LightLogWrite_Info>		pLogWriteQueue;	// 日志消息队列
-	std::condition_variable				pWritedCondVar;	// 条件变量
-	//change to jthread
-	std::jthread						sWritedThreads;	// 日志处理线程
-	std::atomic<bool>					bIsStopLogging;	// 停止标志
-	std::wstring						sLogLastingDir;	// 持久化日志路径
-	std::wstring						sLogsBasedName; // 持久化日志选项
-	std::atomic<bool>					bHasLogLasting;	// 是否日志持久化输出
-	std::atomic<bool>					bLastingTmTags;	// 判断时间是上午还是下午
+	std::wofstream                      pLogFileStream;	// 日志文件流
+	std::mutex                          pLogWriteMutex;	// 日志写入锁
+	std::queue<LightLogWrite_Info>      pLogWriteQueue;	// 日志消息队列
+	std::condition_variable	            pWritedCondVar;	// 条件变量
+
+	std::thread                         sWritedThreads;	// 日志处理线程
+	std::atomic<bool>                   bIsStopLogging;	// 停止标志
+	std::wstring                        sLogLastingDir;	// 持久化日志路径
+	std::wstring                        sLogsBasedName; // 持久化日志选项
+	std::atomic<bool>                   bHasLogLasting;	// 是否日志持久化输出
+	std::atomic<bool>                   bLastingTmTags;	// 判断时间是上午还是下午
 
 };
 
 int main()
 {
-	
+
     std::cout << "Hello World!\n";
 }
