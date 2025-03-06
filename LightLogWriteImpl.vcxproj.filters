@@ -20,12 +20,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="convert.cpp">
-      <Filter>源文件</Filter>
-    </ClInclude>
-    <ClInclude Include="convert.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="iconv.h">
       <Filter>头文件</Filter>
     </ClInclude>

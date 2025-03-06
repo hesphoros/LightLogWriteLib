@@ -15,7 +15,118 @@
 #include <sstream>
 #include <iomanip>
 #include <filesystem>
-#include "convert.h"
+#include <vector>
+#include <stdexcept>
+#include "iconv.h"
+
+
+#pragma comment ( lib,"libiconv_1_17.lib" ) 
+
+
+
+// 函数：将 UTF-8 转换为 std::wstring（假设为 UCS-4）
+static std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
+
+	// 创建 iconv 转换描述符
+	iconv_t cd = iconv_open("UCS-4LE", "UTF-8");
+	if (cd == (iconv_t)-1) {
+		throw std::runtime_error("Failed to open iconv descriptor");
+	}
+
+	// 输入缓冲区
+	char* inBuf = (char*)utf8str.data();
+	size_t inBytesLeft = utf8str.size();
+
+	// 输出缓冲区
+	std::vector<wchar_t> wstrBuffer(utf8str.size()); // 预留足够的空间
+	char* outBuf = (char*)wstrBuffer.data();
+	size_t outBytesLeft = wstrBuffer.size() * sizeof(wchar_t);
+
+	// 执行转换
+	if (iconv(cd, (const char**)&inBuf, &inBytesLeft, &outBuf, &outBytesLeft) == (size_t)-1) {
+		iconv_close(cd);
+		throw std::runtime_error("Conversion failed");
+	}
+
+	// 关闭 iconv 描述符
+	iconv_close(cd);
+
+	// 调整输出字符串的大小
+	size_t wstrLength = (wstrBuffer.size() * sizeof(wchar_t) - outBytesLeft) / sizeof(wchar_t);
+	return std::wstring(wstrBuffer.data(), wstrLength);
+}
+
+
+
+
+static std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
+	// 创建 iconv 转换描述符
+	iconv_t cd = iconv_open("UTF-8", "UCS-4LE");
+	if (cd == (iconv_t)-1) {
+		throw std::runtime_error("Failed to open iconv descriptor");
+	}
+
+	// 输入缓冲区
+	char* inBuf = (char*)wstr.data();
+	size_t inBytesLeft = wstr.size() * sizeof(wchar_t);
+
+	// 输出缓冲区
+	std::vector<char> utf8Buffer(wstr.size() * 4); // 预留足够的空间（UTF-8 最多 4 字节/字符）
+	char* outBuf = utf8Buffer.data();
+	size_t outBytesLeft = utf8Buffer.size();
+
+	// 执行转换
+	if (iconv(cd, (const char**)&inBuf, &inBytesLeft, &outBuf, &outBytesLeft) == (size_t)-1) {
+		iconv_close(cd);
+		throw std::runtime_error("Conversion failed");
+	}
+
+	// 关闭 iconv 描述符
+	iconv_close(cd);
+
+	// 调整输出字符串的大小
+	size_t utf8Length = utf8Buffer.size() - outBytesLeft;
+	return std::string(utf8Buffer.data(), utf8Length);
+}
+
+
+
+
+static std::wstring U16StringToWString(const std::u16string& u16str)
+{
+
+	const char* toEncoding =
+#if defined(_WIN32) || defined(_WIN64)
+		"UTF-16LE"; // Windows 上 wchar_t 是 16 位
+#else
+		"UCS-4LE";  // Linux/macOS 上 wchar_t 是 32 位
+#endif
+	iconv_t cd = iconv_open(toEncoding, "UTF-16LE");
+	if (cd == (iconv_t)-1) {
+		throw std::runtime_error("Failed to open iconv descriptor");
+	}
+
+	char* inBuf = (char*)u16str.data();
+	size_t inBytesLeft = u16str.size() * sizeof(char16_t);
+
+	std::vector<wchar_t> wstrBuffer(u16str.size()); // 预留足够的空间
+	char* outBuf = (char*)wstrBuffer.data();
+	size_t outBytesLeft = wstrBuffer.size() * sizeof(wchar_t);
+
+
+	if (iconv(cd, (const char**)&inBuf, &inBytesLeft, &outBuf, &outBytesLeft) == (size_t)-1) {
+		iconv_close(cd);
+		throw std::runtime_error("Conversion failed");
+	}
+
+
+	iconv_close(cd);
+
+
+	size_t wstrLength = (wstrBuffer.size() * sizeof(wchar_t) - outBytesLeft) / sizeof(wchar_t);
+	return std::wstring(wstrBuffer.data(), wstrLength);
+}
+
 
 // 日志写入接口
 struct LightLogWrite_Info {
@@ -35,22 +146,105 @@ public:
 		sWritedThreads = std::thread(&LightLogWrite_Impl::RunWriteThread, this);
 	}
 
-	void CreateLogsFile();
-	void WriteLogContent();
-	void CloseLogStream() {
+	~LightLogWrite_Impl() {
+		CloseLogStream();
+	}
+
+	void SetLogsFileName(const std::wstring& sFilename) {
+		std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
+		if (pLogFileStream.is_open()) pLogFileStream.close();
+		ChecksDirectory(sFilename);//确保目录存在
+		pLogFileStream.open(sFilename, std::ios::app);
+	}
+
+	void SetLogsFileName(const std::string& sFilename) {
+		SetLogsFileName(Utf8ConvertsToUcs4(sFilename));
+	}
+
+	void SetLogsFileName(const std::u16string& sFilename) {
+		SetLogsFileName(U16StringToWString(sFilename));
+	}
+
+	/// <summary>
+	/// 设置日志持久化输出
+	/// </summary>
+	/// <param name="sFilePath"></param>
+	/// <param name="sBaseName"></param>
+	void SetLogsLasting(const std::wstring& sFilePath, const std::wstring& sBaseName) {
+		sLogLastingDir = sFilePath;
+		sLogsBasedName = sBaseName;
+		bHasLogLasting = true;
+		CreateLogsFile();
+
+	}
+
+	void SetLogsLasting(const std::u16string& sFilePath, const std::u16string& sBaseName) {
+		SetLogsLasting(U16StringToWString(sFilePath), U16StringToWString(sBaseName));
+	}
+	void SetLogsLasting(const std::string & sFilePath, const std::string & sBaseName) {
+		SetLogsLasting(Utf8ConvertsToUcs4(sFilePath), Utf8ConvertsToUcs4(sBaseName));
+	}
+
+	void CreateLogsFile() 
+	{
+
+		std::wstring  sOutFileName = BuildLogFileOut();
+		//std::lock_guard<std::mutex> sLock(pLogWriteMutex);
+		std::scoped_lock<std::mutex> sLock(pLogWriteMutex);
+		ChecksDirectory(sOutFileName);
+		pLogFileStream.close();	//关闭之前提交的文件流
+		pLogFileStream.open(sOutFileName, std::ios::app);
+
+	}
+
+
+	std::wstring BuildLogFileOut() const {
+		std::tm                 sTmPartsInfo = GetCurrsTimerTm();
+		std::wostringstream     sWosStrStream;
+		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y_%m_%d") << (sTmPartsInfo.tm_hour > 12 ? L"PM" : L"AM") << L".log";
+
+		std::filesystem::path   sLotOutPaths = sLogLastingDir;
+		std::filesystem::path   sLogOutFiles = sLotOutPaths / (sLogsBasedName + sWosStrStream.str());
+
+		return sLogOutFiles.wstring();
+	}
+
+	void WriteLogContent(const std::wstring & sTypeVal, const std::wstring & sMessage) {
+		{
+			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
+			pLogWriteQueue.push({ sTypeVal, sMessage });
+
+		}
+		pWritedCondVar.notify_one();//通知线程
+	}
+
+	void WriteLogContent(const std::string & sTypeVal, const std::string & sMessage)
+	{
+		WriteLogContent(Utf8ConvertsToUcs4(sTypeVal), Utf8ConvertsToUcs4(sMessage));
+	}
+
+	void WriteLogContent(const std::u16string & sTypeVal, const std::u16string & sMessage) {
+		WriteLogContent(U16StringToWString(sTypeVal), U16StringToWString(sMessage));
+	}
+
+
+	void CloseLogStream() 
+	{
 		bIsStopLogging = true;
 		pWritedCondVar.notify_all();
 		WriteLogContent(L"Stop log write thread", L"================================>");
 		if (sWritedThreads.joinable()) sWritedThreads.join();//等待线程结束
 	}
+	
+
 private:
 	void RunWriteThread() {
 		while (true) {
-			if (bHasLogLasting) if (bLastingTmTags != GetCurrsTimerTm().tm_hour > 12) CreateLogsFile();
+			if (bHasLogLasting) 
+				if (bLastingTmTags != GetCurrsTimerTm().tm_hour > 12) 
+					CreateLogsFile();
 			LightLogWrite_Info sLogMessageInf;
-			{
-
-				
+			{				
 				auto sLock = std::unique_lock<std::mutex>(pLogWriteMutex);
 				pWritedCondVar.wait(sLock, [this] {return !pLogWriteQueue.empty() || bIsStopLogging; });
 				if (bIsStopLogging && pLogWriteQueue.empty()) break;//如果停止标志为真且队列为空，则退出线程
@@ -70,7 +264,8 @@ private:
 		pLogFileStream.close();
 		std::cerr << "Log write thread Exit\n";
 	}
-	void ChecksDirectory(const std::wstring& sFilename) const{
+
+	void ChecksDirectory(const std::wstring& sFilename) {
 		std::filesystem::path sFullFileName(sFilename);
 		std::filesystem::path sOutFilesPath = sFullFileName.parent_path();
 		if (!sOutFilesPath.empty() && !std::filesystem::exists(sOutFilesPath))
@@ -114,8 +309,72 @@ private:
 
 };
 
-int main()
-{
 
-    std::cout << "Hello World!\n";
+
+// 测试日志文件创建和写入
+void TestLogFileCreation() {
+	LightLogWrite_Impl logger;
+	logger.SetLogsFileName(L"test_log.txt");
+	logger.WriteLogContent(L"TestLogFileCreation", L"This is a test log message.");
+	std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待日志写入完成
+	std::cout << "TestLogFileCreation: Log file created and message written.\n";
+}
+
+// 测试多线程日志写入
+void TestMultiThreadLogging() {
+	LightLogWrite_Impl logger;
+	logger.SetLogsFileName(L"multi_thread_log.txt");
+
+	auto logTask = [&logger](int threadId) {
+		for (int i = 0; i < 5; ++i) {
+			std::wstring message = L"Thread " + std::to_wstring(threadId) + L" - Log " + std::to_wstring(i);
+			logger.WriteLogContent(L"TestMultiThreadLogging", message);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 模拟延迟
+		}
+		};
+
+	std::vector<std::thread> threads;
+	for (int i = 0; i < 5; ++i) {
+		threads.emplace_back(logTask, i + 1);
+	}
+
+	for (auto& t : threads) {
+		t.join();
+	}
+
+	std::cout << "TestMultiThreadLogging: Log messages written from multiple threads.\n";
+}
+
+// 测试日志持久化功能
+void TestLogLasting() {
+	LightLogWrite_Impl logger;
+	logger.SetLogsLasting(L"./logs", L"test_log_");
+	logger.WriteLogContent(L"TestLogLasting", L"This is a persistent log message.");
+	std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待日志写入完成
+	std::cout << "TestLogLasting: Persistent log file created and message written.\n";
+}
+
+// 测试日志流关闭功能
+void TestCloseLogStream() {
+	LightLogWrite_Impl logger;
+	logger.SetLogsFileName(L"close_log.txt");
+	logger.WriteLogContent(L"TestCloseLogStream", L"This log should be written.");
+	logger.CloseLogStream();
+	logger.WriteLogContent(L"TestCloseLogStream", L"This log should NOT be written.");
+	std::cout << "TestCloseLogStream: Log stream closed.\n";
+}
+
+// 主函数，运行所有测试
+int main() {
+	try {
+		TestLogFileCreation();
+		//TestMultiThreadLogging();
+		//TestLogLasting();
+		//TestCloseLogStream();
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Test failed: " << e.what() << std::endl;
+	}
+
+	return 0;
 }
