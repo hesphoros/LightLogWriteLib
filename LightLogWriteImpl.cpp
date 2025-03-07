@@ -20,111 +20,60 @@
 #include "iconv.h"
 
 
-#pragma comment ( lib,"libiconv_1_17.lib" ) 
+#pragma comment ( lib,"libiconv.lib" ) 
 
 
 
 // 函数：将 UTF-8 转换为 std::wstring（假设为 UCS-4）
 static std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
 
-	// 创建 iconv 转换描述符
-	iconv_t cd = iconv_open("UCS-4LE", "UTF-8");
-	if (cd == (iconv_t)-1) {
-		throw std::runtime_error("Failed to open iconv descriptor");
+	try {
+		// 创建 std::wstring_convert 对象，使用 std::codecvt_utf8<wchar_t> 进行转换
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		// 将 UTF-8 字符串转换为 std::wstring
+		return converter.from_bytes(utf8str);
 	}
-
-	// 输入缓冲区
-	char* inBuf = (char*)utf8str.data();
-	size_t inBytesLeft = utf8str.size();
-
-	// 输出缓冲区
-	std::vector<wchar_t> wstrBuffer(utf8str.size()); // 预留足够的空间
-	char* outBuf = (char*)wstrBuffer.data();
-	size_t outBytesLeft = wstrBuffer.size() * sizeof(wchar_t);
-
-	// 执行转换
-	if (iconv(cd, (const char**)&inBuf, &inBytesLeft, &outBuf, &outBytesLeft) == (size_t)-1) {
-		iconv_close(cd);
-		throw std::runtime_error("Conversion failed");
+	catch (const std::range_error& e) {
+		// 如果转换失败（例如输入不是有效的 UTF-8），抛出异常
+		throw std::runtime_error("Failed to convert UTF-8 to UCS-4: " + std::string(e.what()));
 	}
-
-	// 关闭 iconv 描述符
-	iconv_close(cd);
-
-	// 调整输出字符串的大小
-	size_t wstrLength = (wstrBuffer.size() * sizeof(wchar_t) - outBytesLeft) / sizeof(wchar_t);
-	return std::wstring(wstrBuffer.data(), wstrLength);
 }
 
 
 
 
 static std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
-	// 创建 iconv 转换描述符
-	iconv_t cd = iconv_open("UTF-8", "UCS-4LE");
-	if (cd == (iconv_t)-1) {
-		throw std::runtime_error("Failed to open iconv descriptor");
+	try {
+		// 创建 std::wstring_convert 对象，使用 std::codecvt_utf8<wchar_t> 进行转换
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		// 将 std::wstring 转换为 UTF-8 编码的 std::string
+		return converter.to_bytes(wstr);
 	}
-
-	// 输入缓冲区
-	char* inBuf = (char*)wstr.data();
-	size_t inBytesLeft = wstr.size() * sizeof(wchar_t);
-
-	// 输出缓冲区
-	std::vector<char> utf8Buffer(wstr.size() * 4); // 预留足够的空间（UTF-8 最多 4 字节/字符）
-	char* outBuf = utf8Buffer.data();
-	size_t outBytesLeft = utf8Buffer.size();
-
-	// 执行转换
-	if (iconv(cd, (const char**)&inBuf, &inBytesLeft, &outBuf, &outBytesLeft) == (size_t)-1) {
-		iconv_close(cd);
-		throw std::runtime_error("Conversion failed");
+	catch (const std::range_error& e) {
+		// 如果转换失败（例如输入包含无效的宽字符），抛出异常
+		throw std::runtime_error("Failed to convert UCS-4 to UTF-8: " + std::string(e.what()));
 	}
-
-	// 关闭 iconv 描述符
-	iconv_close(cd);
-
-	// 调整输出字符串的大小
-	size_t utf8Length = utf8Buffer.size() - outBytesLeft;
-	return std::string(utf8Buffer.data(), utf8Length);
 }
-
 
 
 
 static std::wstring U16StringToWString(const std::u16string& u16str)
 {
+	std::wstring wstr;
 
-	const char* toEncoding =
-#if defined(_WIN32) || defined(_WIN64)
-		"UTF-16LE"; // Windows 上 wchar_t 是 16 位
+#ifdef _WIN32
+	// Windows 平台：wchar_t 是 2 字节（UTF-16），直接拷贝
+	wstr.assign(u16str.begin(), u16str.end());
 #else
-		"UCS-4LE";  // Linux/macOS 上 wchar_t 是 32 位
+	// Linux 平台：wchar_t 是 4 字节（UTF-32），需要转换
+	std::wstring_convert<std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>> converter;
+	wstr = converter.from_bytes(
+		reinterpret_cast<const char*>(u16str.data()),
+		reinterpret_cast<const char*>(u16str.data() + u16str.size())
+	);
 #endif
-	iconv_t cd = iconv_open(toEncoding, "UTF-16LE");
-	if (cd == (iconv_t)-1) {
-		throw std::runtime_error("Failed to open iconv descriptor");
-	}
 
-	char* inBuf = (char*)u16str.data();
-	size_t inBytesLeft = u16str.size() * sizeof(char16_t);
-
-	std::vector<wchar_t> wstrBuffer(u16str.size()); // 预留足够的空间
-	char* outBuf = (char*)wstrBuffer.data();
-	size_t outBytesLeft = wstrBuffer.size() * sizeof(wchar_t);
-
-
-	if (iconv(cd, (const char**)&inBuf, &inBytesLeft, &outBuf, &outBytesLeft) == (size_t)-1) {
-		iconv_close(cd);
-		throw std::runtime_error("Conversion failed");
-	}
-
-
-	iconv_close(cd);
-
-
-	size_t wstrLength = (wstrBuffer.size() * sizeof(wchar_t) - outBytesLeft) / sizeof(wchar_t);
-	return std::wstring(wstrBuffer.data(), wstrLength);
+	return wstr;
 }
 
 
@@ -189,8 +138,7 @@ public:
 	{
 
 		std::wstring  sOutFileName = BuildLogFileOut();
-		//std::lock_guard<std::mutex> sLock(pLogWriteMutex);
-		std::scoped_lock<std::mutex> sLock(pLogWriteMutex);
+		std::lock_guard<std::mutex> sLock(pLogWriteMutex);		
 		ChecksDirectory(sOutFileName);
 		pLogFileStream.close();	//关闭之前提交的文件流
 		pLogFileStream.open(sOutFileName, std::ios::app);
@@ -368,9 +316,9 @@ void TestCloseLogStream() {
 int main() {
 	try {
 		TestLogFileCreation();
-		//TestMultiThreadLogging();
-		//TestLogLasting();
-		//TestCloseLogStream();
+		TestMultiThreadLogging();
+		TestLogLasting();
+		TestCloseLogStream();
 	}
 	catch (const std::exception& e) {
 		std::cerr << "Test failed: " << e.what() << std::endl;
