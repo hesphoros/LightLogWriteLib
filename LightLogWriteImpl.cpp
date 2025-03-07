@@ -25,8 +25,8 @@
 
 // 日志写入接口
 struct LightLogWrite_Info{
-	std::wstring                sLogTagNameVal;//日志标签
-	std::wstring                sLogContentVal;//日志的内容
+	std::wstring                   sLogTagNameVal;//日志标签
+	std::wstring                   sLogContentVal;//日志的内容
 };
 
 class LightLogWrite_Impl {
@@ -66,18 +66,22 @@ public:
 	/// </summary>
 	/// <param name="sFilePath"></param>
 	/// <param name="sBaseName"></param>
-	void SetLogsLasting(const std::wstring& sFilePath, const std::wstring& sBaseName) {
+	void SetLastingsLogs(const std::wstring& sFilePath, const std::wstring& sBaseName) {
 		sLogLastingDir = sFilePath;
 		sLogsBasedName = sBaseName;
 		bHasLogLasting = true;
 		CreateLogsFile();
 	}
 
-	void SetLogsLasting(const std::u16string& sFilePath, const std::u16string& sBaseName) {
-		SetLogsLasting(U16StringToWString(sFilePath), U16StringToWString(sBaseName));
+	void SetLastingsLogs(const std::u16string& sFilePath, const std::u16string& sBaseName) {
+
+		SetLastingsLogs(U16StringToWString(sFilePath), U16StringToWString(sBaseName));
+
 	}
-	void SetLogsLasting(const std::string & sFilePath, const std::string & sBaseName) {
-		SetLogsLasting(Utf8ConvertsToUcs4(sFilePath), Utf8ConvertsToUcs4(sBaseName));
+	void SetLastingsLogs(const std::string & sFilePath, const std::string & sBaseName) {
+
+		SetLastingsLogs(Utf8ConvertsToUcs4(sFilePath), Utf8ConvertsToUcs4(sBaseName));
+
 	}
 
 
@@ -85,7 +89,6 @@ public:
 		{
 			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
 			pLogWriteQueue.push({ sTypeVal, sMessage });
-
 		}
 		pWritedCondVar.notify_one();//通知线程
 	}
@@ -98,17 +101,17 @@ public:
 	void WriteLogContent(const std::u16string & sTypeVal, const std::u16string & sMessage) {
 		WriteLogContent(U16StringToWString(sTypeVal), U16StringToWString(sMessage));
 	}
-
-
-	
 	
 
 private:
 
-	std::wstring BuildLogFileOut() const {
+	std::wstring BuildLogFileOut()  {
 		std::tm                 sTmPartsInfo = GetCurrsTimerTm();
 		std::wostringstream     sWosStrStream;
+
 		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y_%m_%d") << (sTmPartsInfo.tm_hour > 12 ? L"_AM" : L"_PM") << L".log";
+
+		bLastingTmTags = (sTmPartsInfo.tm_hour > 12);
 
 		std::filesystem::path   sLotOutPaths = sLogLastingDir;
 		std::filesystem::path   sLogOutFiles = sLotOutPaths / (sLogsBasedName + sWosStrStream.str());
@@ -138,7 +141,7 @@ private:
 	void RunWriteThread() {
 		while (true) {
 			if (bHasLogLasting) 
-				if (bLastingTmTags != GetCurrsTimerTm().tm_hour > 12) 
+				if (bLastingTmTags != (GetCurrsTimerTm().tm_hour > 12)) 
 					CreateLogsFile();
 			LightLogWrite_Info sLogMessageInf;
 			{				
@@ -153,7 +156,7 @@ private:
 			}
 			if (!sLogMessageInf.sLogContentVal.empty() && pLogFileStream.is_open())
 			{
-				pLogFileStream << sLogMessageInf.sLogTagNameVal << L"-/>>>" << GetCurrentTimer() << " : " <<sLogMessageInf.sLogContentVal << "\n";
+				pLogFileStream << sLogMessageInf.sLogTagNameVal << L"-//>>>" << GetCurrentTimer() << " : " <<sLogMessageInf.sLogContentVal << "\n";
 
 			}
 
@@ -173,17 +176,17 @@ private:
 	}
 
 	std::wstring GetCurrentTimer() const {
-		std::tm				sTmPartsInfo = GetCurrsTimerTm();
-		std::wostringstream sWosStrStream;
+		std::tm              sTmPartsInfo = GetCurrsTimerTm();
+		std::wostringstream  sWosStrStream;
 		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y-%m-%d %H:%M:%S");
 		return	sWosStrStream.str();
 
 	}
 
 	std::tm GetCurrsTimerTm() const{
-		auto		sCurrentTime = std::chrono::system_clock::now();
+		auto        sCurrentTime = std::chrono::system_clock::now();
 		std::time_t sCurrTimerTm = std::chrono::system_clock::to_time_t(sCurrentTime);
-		std::tm		sCurrTmDatas;
+		std::tm     sCurrTmDatas;
 #ifdef _WIN32
 		localtime_s(&sCurrTmDatas, &sCurrTimerTm);
 #else
@@ -192,6 +195,7 @@ private:
 		return sCurrTmDatas;
 	}
 
+private:
 	std::wofstream                                 pLogFileStream;	// 日志文件流
 	std::mutex                                     pLogWriteMutex;	// 日志写入锁
 	std::queue<LightLogWrite_Info>                 pLogWriteQueue;	// 日志消息队列
@@ -246,33 +250,24 @@ void TestMultiThreadLogging() {
 // 测试日志持久化功能
 void TestLogLasting() {
 	LightLogWrite_Impl logger;
-	logger.SetLogsLasting(L"./logs", L"test_log_");
+	logger.SetLastingsLogs(L"./logs", L"test_log_");
 	logger.WriteLogContent(L"TestLogLasting", L"This is a persistent log message.");
+	logger.WriteLogContent(L"     INFO     ", L"This is a debug log message.");
 	std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待日志写入完成
-	std::cout << "TestLogLasting: Persistent log file created and message written.\n";
+	
 }
 
-// 测试日志流关闭功能
-void TestCloseLogStream() {
-	LightLogWrite_Impl logger;
-	logger.SetLogsFileName(L"close_log.txt");
-	logger.WriteLogContent(L"TestCloseLogStream", L"This log should be written.");
-	
-	logger.WriteLogContent(L"TestCloseLogStream", L"This log should NOT be written.");
-	std::cout << "TestCloseLogStream: Log stream closed.\n";
-}
 
 // 主函数，运行所有测试
 int main() {
 	try {
-		TestLogFileCreation();
-		//TestMultiThreadLogging();
-		//TestLogLasting();
-		//TestCloseLogStream();
+		//TestLogFileCreation();
+		
+		TestLogLasting();
+		
 	}
 	catch (const std::exception& e) {
 		std::cerr << "Test failed: " << e.what() << std::endl;
 	}
-
 	return 0;
 }

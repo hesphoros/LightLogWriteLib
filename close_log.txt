@@ -1,6 +1,0 @@
-TestCloseLogStream-/>>>2025-03-07 18:57:49 : This log should be written.
-Stop log write thread-/>>>2025-03-07 18:57:49 : ================================>
-TestCloseLogStream-/>>>2025-03-07 20:43:27 : This log should be written.
-Stop log write thread-/>>>2025-03-07 20:43:27 : ================================>
-TestCloseLogStream-/>>>2025-03-07 20:59:35 : This log should be written.
-Stop log write thread-/>>>2025-03-07 20:59:35 : ================================>
