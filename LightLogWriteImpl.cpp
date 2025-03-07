@@ -18,23 +18,19 @@
 #include "iconv.h"
 #include "convert_tools.h"
 
-
-#pragma comment ( lib,"libiconv.lib" ) 
-
-
+#pragma comment ( lib,"libiconv.lib" )
 
 // 日志写入接口
-struct LightLogWrite_Info{
+struct LightLogWrite_Info {
 	std::wstring                   sLogTagNameVal;//日志标签
 	std::wstring                   sLogContentVal;//日志的内容
 };
 
 class LightLogWrite_Impl {
-
 public:
-	LightLogWrite_Impl() : bIsStopLogging{ false },bHasLogLasting{ false }
-		
-	{		
+	LightLogWrite_Impl() : bIsStopLogging{ false }, bHasLogLasting{ false }
+
+	{
 		sWritedThreads = std::thread(&LightLogWrite_Impl::RunWriteThread, this);
 	}
 
@@ -74,18 +70,13 @@ public:
 	}
 
 	void SetLastingsLogs(const std::u16string& sFilePath, const std::u16string& sBaseName) {
-
 		SetLastingsLogs(U16StringToWString(sFilePath), U16StringToWString(sBaseName));
-
 	}
-	void SetLastingsLogs(const std::string & sFilePath, const std::string & sBaseName) {
-
+	void SetLastingsLogs(const std::string& sFilePath, const std::string& sBaseName) {
 		SetLastingsLogs(Utf8ConvertsToUcs4(sFilePath), Utf8ConvertsToUcs4(sBaseName));
-
 	}
 
-
-	void WriteLogContent(const std::wstring & sTypeVal, const std::wstring & sMessage) {
+	void WriteLogContent(const std::wstring& sTypeVal, const std::wstring& sMessage) {
 		{
 			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
 			pLogWriteQueue.push({ sTypeVal, sMessage });
@@ -93,19 +84,18 @@ public:
 		pWritedCondVar.notify_one();//通知线程
 	}
 
-	void WriteLogContent(const std::string & sTypeVal, const std::string & sMessage)
+	void WriteLogContent(const std::string& sTypeVal, const std::string& sMessage)
 	{
 		WriteLogContent(Utf8ConvertsToUcs4(sTypeVal), Utf8ConvertsToUcs4(sMessage));
 	}
 
-	void WriteLogContent(const std::u16string & sTypeVal, const std::u16string & sMessage) {
+	void WriteLogContent(const std::u16string& sTypeVal, const std::u16string& sMessage) {
 		WriteLogContent(U16StringToWString(sTypeVal), U16StringToWString(sMessage));
 	}
-	
 
 private:
 
-	std::wstring BuildLogFileOut()  {
+	std::wstring BuildLogFileOut() {
 		std::tm                 sTmPartsInfo = GetCurrsTimerTm();
 		std::wostringstream     sWosStrStream;
 
@@ -129,37 +119,33 @@ private:
 
 	void CreateLogsFile()
 	{
-
 		std::wstring  sOutFileName = BuildLogFileOut();
 		std::lock_guard<std::mutex> sLock(pLogWriteMutex);
 		ChecksDirectory(sOutFileName);
 		pLogFileStream.close();	//关闭之前提交的文件流
 		pLogFileStream.open(sOutFileName, std::ios::app);
-
 	}
 
 	void RunWriteThread() {
 		while (true) {
-			if (bHasLogLasting) 
-				if (bLastingTmTags != (GetCurrsTimerTm().tm_hour > 12)) 
+			if (bHasLogLasting)
+				if (bLastingTmTags != (GetCurrsTimerTm().tm_hour > 12))
 					CreateLogsFile();
 			LightLogWrite_Info sLogMessageInf;
-			{				
+			{
 				auto sLock = std::unique_lock<std::mutex>(pLogWriteMutex);
 				pWritedCondVar.wait(sLock, [this] {return !pLogWriteQueue.empty() || bIsStopLogging; });
 				if (bIsStopLogging && pLogWriteQueue.empty()) break;//如果停止标志为真且队列为空，则退出线程
 				if (!pLogWriteQueue.empty()) {
 					sLogMessageInf = pLogWriteQueue.front();
 					pLogWriteQueue.pop();
-					std::cerr << "pop:" << Ucs4ConvertToUtf8(sLogMessageInf.sLogContentVal) <<"\n";
+					std::cerr << "pop:" << Ucs4ConvertToUtf8(sLogMessageInf.sLogContentVal) << "\n";
 				}
 			}
 			if (!sLogMessageInf.sLogContentVal.empty() && pLogFileStream.is_open())
 			{
-				pLogFileStream << sLogMessageInf.sLogTagNameVal << L"-//>>>" << GetCurrentTimer() << " : " <<sLogMessageInf.sLogContentVal << "\n";
-
+				pLogFileStream << sLogMessageInf.sLogTagNameVal << L"-//>>>" << GetCurrentTimer() << " : " << sLogMessageInf.sLogContentVal << "\n";
 			}
-
 		}
 		pLogFileStream.close();
 		std::cerr << "Log write thread Exit\n";
@@ -172,7 +158,6 @@ private:
 		{
 			std::filesystem::create_directories(sOutFilesPath);
 		}
-
 	}
 
 	std::wstring GetCurrentTimer() const {
@@ -180,10 +165,9 @@ private:
 		std::wostringstream  sWosStrStream;
 		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y-%m-%d %H:%M:%S");
 		return	sWosStrStream.str();
-
 	}
 
-	std::tm GetCurrsTimerTm() const{
+	std::tm GetCurrsTimerTm() const {
 		auto        sCurrentTime = std::chrono::system_clock::now();
 		std::time_t sCurrTimerTm = std::chrono::system_clock::to_time_t(sCurrentTime);
 		std::tm     sCurrTmDatas;
@@ -207,15 +191,12 @@ private:
 	std::wstring                                   sLogsBasedName; // 持久化日志选项
 	std::atomic<bool>                              bHasLogLasting;	// 是否日志持久化输出 default false
 	std::atomic<bool>                              bLastingTmTags;	// 判断时间是上午还是下午
-
 };
-
-
 
 // 测试日志文件创建和写入
 void TestLogFileCreation() {
 	LightLogWrite_Impl logger;
-	
+
 	logger.SetLogsFileName(L"test_log.txt");
 	logger.WriteLogContent(L"INFO", L"This is a test info  log message.");
 	std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待日志写入完成
@@ -254,17 +235,14 @@ void TestLogLasting() {
 	logger.WriteLogContent(L"TestLogLasting", L"This is a persistent log message.");
 	logger.WriteLogContent(L"     INFO     ", L"This is a debug log message.");
 	std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待日志写入完成
-	
 }
-
 
 // 主函数，运行所有测试
 int main() {
 	try {
-		//TestLogFileCreation();
-		
+		TestLogFileCreation();
+
 		TestLogLasting();
-		
 	}
 	catch (const std::exception& e) {
 		std::cerr << "Test failed: " << e.what() << std::endl;
