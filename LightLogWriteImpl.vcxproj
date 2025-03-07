@@ -132,9 +132,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="convet_tools.cpp" />
     <ClCompile Include="LightLogWriteImpl.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="convert_tools.h" />
     <ClInclude Include="iconv.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

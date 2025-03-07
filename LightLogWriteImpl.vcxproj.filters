@@ -18,9 +18,15 @@
     <ClCompile Include="LightLogWriteImpl.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="convet_tools.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="iconv.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="convert_tools.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
