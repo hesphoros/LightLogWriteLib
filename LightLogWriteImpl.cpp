@@ -20,6 +20,8 @@
 
 #pragma comment ( lib,"libiconv.lib" )
 
+//TODO : 接入自己编写的UniConv库
+
 // 日志写入接口
 struct LightLogWrite_Info {
 	std::wstring                   sLogTagNameVal;//日志标签
