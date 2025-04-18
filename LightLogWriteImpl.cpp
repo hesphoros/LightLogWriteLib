@@ -21,6 +21,7 @@
 #pragma comment ( lib,"libiconv.lib" )
 
 //TODO : 接入自己编写的UniConv库
+//TODO : 使用无锁队列
 
 // 日志写入接口
 struct LightLogWrite_Info {
