@@ -23,17 +23,41 @@
 //TODO : 接入自己编写的UniConv库
 //TODO : 使用无锁队列
 
+/// problem
+/// 1. 日志队列无限增长风险
+///       如果日志写入速度慢于日志产生速度，pLogWriteQueue 队列可能无限增长，导致内存溢出风险。
+///       建议：为队列设置最大长度，超出时可丢弃、阻塞或落盘。
+
+/// 2. 日志文件打开失败 异常处理缺失
+/// 文件打开、写入、目录创建等操作没有 try - catch 保护，遇到磁盘故障或权限问题会崩溃。
+/// 建议：关键IO操作应加异常捕获，出错时写入备用日志或发出警告。
+
 // 日志写入接口
 struct LightLogWrite_Info {
 	std::wstring                   sLogTagNameVal;//日志标签
 	std::wstring                   sLogContentVal;//日志的内容
 };
 
+enum class LogQueueFullStrategy {
+	Block,      // 阻塞等待
+	DropOldest  // 丢弃最旧日志
+};
+
+
 class LightLogWrite_Impl {
 public:
-	LightLogWrite_Impl() : bIsStopLogging{ false }, bHasLogLasting{ false }
-
+	LightLogWrite_Impl(size_t maxQueueSize = 5000,LogQueueFullStrategy  strategy = LogQueueFullStrategy::Block , size_t reportInterval = 100)
+		: 
+		kMaxQueueSize(maxQueueSize),
+		discardCount(0),
+		lastReportedDiscardCount(0),
+		bIsStopLogging{false},
+		bNeedReport{false},
+		queueFullStrategy(strategy),
+		reportInterval(reportInterval),
+		bHasLogLasting{false}
 	{
+		
 		sWritedThreads = std::thread(&LightLogWrite_Impl::RunWriteThread, this);
 	}
 
@@ -79,12 +103,48 @@ public:
 		SetLastingsLogs(Utf8ConvertsToUcs4(sFilePath), Utf8ConvertsToUcs4(sBaseName));
 	}
 
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="sTypeVal"></param>
+	/// <param name="sMessage"></param>
 	void WriteLogContent(const std::wstring& sTypeVal, const std::wstring& sMessage) {
-		{
-			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
+		bool bNeedReport = false;
+		size_t currentDiscard = 0;
+		static thread_local bool inErrorReport = false;
+
+		if (bIsStopLogging) return;
+
+		if (queueFullStrategy == LogQueueFullStrategy::Block) {
+			std::unique_lock<std::mutex> sWriteLock(pLogWriteMutex);
+			pWritedCondVar.wait(sWriteLock, [this] {
+				return pLogWriteQueue.size() < kMaxQueueSize || bIsStopLogging;
+				});
+			if (bIsStopLogging) return;
 			pLogWriteQueue.push({ sTypeVal, sMessage });
 		}
-		pWritedCondVar.notify_one();//通知线程
+		else if (queueFullStrategy == LogQueueFullStrategy::DropOldest) {
+			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
+			if (pLogWriteQueue.size() >= kMaxQueueSize) {
+				pLogWriteQueue.pop();
+				++discardCount;
+				if (discardCount - lastReportedDiscardCount >= reportInterval) {
+					bNeedReport = true;
+					currentDiscard = discardCount;
+					lastReportedDiscardCount.store(discardCount.load());
+				}
+			}
+			pLogWriteQueue.push({ sTypeVal, sMessage });
+		}
+		pWritedCondVar.notify_one();
+
+		// 防止递归死循环
+		if (bNeedReport && !inErrorReport) {
+			inErrorReport = true;
+			WriteLogContent(L"LOG_OVERFLOW",
+				L"The log queue overflows and has been discarded " + std::to_wstring(currentDiscard) + L" logs");
+			inErrorReport = false;
+		}
 	}
 
 	void WriteLogContent(const std::string& sTypeVal, const std::string& sMessage)
@@ -94,6 +154,14 @@ public:
 
 	void WriteLogContent(const std::u16string& sTypeVal, const std::u16string& sMessage) {
 		WriteLogContent(U16StringToWString(sTypeVal), U16StringToWString(sMessage));
+	}
+
+	size_t GetDiscardCount() const {
+		return discardCount;
+	}
+
+	void ResetDiscardCount() {
+		discardCount = 0;
 	}
 
 private:
@@ -155,6 +223,7 @@ private:
 	}
 
 	void ChecksDirectory(const std::wstring& sFilename) {
+		
 		std::filesystem::path sFullFileName(sFilename);
 		std::filesystem::path sOutFilesPath = sFullFileName.parent_path();
 		if (!sOutFilesPath.empty() && !std::filesystem::exists(sOutFilesPath))
@@ -183,18 +252,26 @@ private:
 	}
 
 private:
-	std::wofstream                                 pLogFileStream;	// 日志文件流
-	std::mutex                                     pLogWriteMutex;	// 日志写入锁
-	std::queue<LightLogWrite_Info>                 pLogWriteQueue;	// 日志消息队列
-	std::condition_variable	                       pWritedCondVar;	// 条件变量
+	std::wofstream                                 pLogFileStream;  // 日志文件流
+	std::mutex                                     pLogWriteMutex;  // 日志写入锁
+	std::queue<LightLogWrite_Info>                 pLogWriteQueue;  // 日志写入队列 FIFO
+	std::condition_variable	                       pWritedCondVar;  // 条件变量 唤醒日志写线程
 
-	std::thread                                    sWritedThreads;	// 日志处理线程
-	std::atomic<bool>                              bIsStopLogging;	// 停止标志  default false
-	std::wstring                                   sLogLastingDir;	// 持久化日志路径
-	std::wstring                                   sLogsBasedName; // 持久化日志选项
-	std::atomic<bool>                              bHasLogLasting;	// 是否日志持久化输出 default false
-	std::atomic<bool>                              bLastingTmTags;	// 判断时间是上午还是下午
+	std::thread                                    sWritedThreads;  // 日志处理线程
+	std::atomic<bool>                              bIsStopLogging;  // 停止标志  default false 控制线程停止
+	std::wstring                                   sLogLastingDir;  // 持久化日志路径
+	std::wstring                                   sLogsBasedName;  // 持久化日志选项
+	std::atomic<bool>                              bHasLogLasting;  // 是否持久化输出
+	std::atomic<bool>                              bLastingTmTags;  // 当前日志文件AM/PM标识
+	const size_t                                    kMaxQueueSize;  // 队列的最大长度
+	LogQueueFullStrategy                        queueFullStrategy;  // 队列满时处理策略
+	std::atomic<size_t>                              discardCount;  // 日志丢弃计数
+	std::atomic<size_t>                   lastReportedDiscardCount;  // 上次报告后丢弃条数
+	std::atomic<size_t>                             reportInterval;  // 报告间隔
+	std::atomic<bool>                                  bNeedReport;  // 是否需要报告
 };
+
+
 
 // 测试日志文件创建和写入
 void TestLogFileCreation() {

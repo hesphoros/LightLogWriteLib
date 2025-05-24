@@ -1,3 +1,4 @@
+#pragma 
 #include "convert_tools.h"
 
 // 函数：将 UTF-8 转换为 std::wstring（假设为 UCS-4）
