@@ -20,17 +20,7 @@
 
 #pragma comment ( lib,"libiconv.lib" )
 
-//TODO : 接入自己编写的UniConv库
-//TODO : 使用无锁队列
 
-/// problem
-/// 1. 日志队列无限增长风险
-///       如果日志写入速度慢于日志产生速度，pLogWriteQueue 队列可能无限增长，导致内存溢出风险。
-///       建议：为队列设置最大长度，超出时可丢弃、阻塞或落盘。
-
-/// 2. 日志文件打开失败 异常处理缺失
-/// 文件打开、写入、目录创建等操作没有 try - catch 保护，遇到磁盘故障或权限问题会崩溃。
-/// 建议：关键IO操作应加异常捕获，出错时写入备用日志或发出警告。
 
 // 日志写入接口
 struct LightLogWrite_Info {
@@ -72,7 +62,7 @@ public:
 	void SetLogsFileName(const std::wstring& sFilename) {
 		std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
 		if (pLogFileStream.is_open()) pLogFileStream.close();
-		ChecksDirectory(sFilename);//确保目录存在
+		ChecksDirectory(sFilename);  //确保目录存在
 		pLogFileStream.open(sFilename, std::ios::app);
 	}
 
@@ -170,7 +160,7 @@ private:
 		std::tm                 sTmPartsInfo = GetCurrsTimerTm();
 		std::wostringstream     sWosStrStream;
 
-		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y_%m_%d") << (sTmPartsInfo.tm_hour > 12 ? L"_AM" : L"_PM") << L".log";
+		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y_%m_%d") << (sTmPartsInfo.tm_hour >= 12 ? L"_AM" : L"_PM") << L".log";
 
 		bLastingTmTags = (sTmPartsInfo.tm_hour > 12);
 
