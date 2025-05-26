@@ -21,3 +21,6 @@ logs/
 LightLog.1ac2c014/
 lockfree_test_output.log
 test_log.txt
+LightLogWriteImpl_result.log
+LockFreeLogWriteImpl_result.log
+LightLogWriteImpl.vcxproj.user

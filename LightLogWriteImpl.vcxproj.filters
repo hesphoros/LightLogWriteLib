@@ -18,13 +18,13 @@
     <ClCompile Include="convet_tools.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="TestLockFreeLogWriteImpl.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="源.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="LockFreeLogWriteImpl.hpp">
-      <Filter>头文件</Filter>
-    </ClCompile>
-    <ClCompile Include="LightLogWriteImpl.hpp">
+    <ClCompile Include="LockFreeQueue.hpp">
       <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -33,6 +33,15 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="convert_tools.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LightLogWriteCommon.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LightLogWriteImpl.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeLogWriteImpl.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

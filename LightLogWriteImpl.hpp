@@ -18,27 +18,16 @@
 #include <stdexcept>
 #include "iconv.h"
 #include "convert_tools.h"
+#include "LightLogWriteCommon.h"
 
 #pragma comment ( lib,"libiconv.lib" )
 
 
 
-// 日志写入接口
-struct LightLogWrite_Info {
-	std::wstring                   sLogTagNameVal;//日志标签
-	std::wstring                   sLogContentVal;//日志的内容
-};
-
-enum class LogQueueFullStrategy {
-	Block,      // 阻塞等待
-	DropOldest  // 丢弃最旧日志
-};
-
-
 
 class LightLogWrite_Impl {
 public:
-	LightLogWrite_Impl(size_t maxQueueSize = 5000,LogQueueFullStrategy  strategy = LogQueueFullStrategy::Block , size_t reportInterval = 100)
+	LightLogWrite_Impl(size_t maxQueueSize = 10000,LogQueueFullStrategy  strategy = LogQueueFullStrategy::Block , size_t reportInterval = 100)
 		: 
 		kMaxQueueSize(maxQueueSize),
 		discardCount(0),
@@ -105,19 +94,22 @@ public:
 		size_t currentDiscard = 0;
 		static thread_local bool inErrorReport = false;
 
-		if (bIsStopLogging) return;
-
 		if (queueFullStrategy == LogQueueFullStrategy::Block) {
 			std::unique_lock<std::mutex> sWriteLock(pLogWriteMutex);
+			//std::wcerr << L"[WriteLogContent] Try push (Block), queue size: " << pLogWriteQueue.size() << std::endl;
+		
 			pWritedCondVar.wait(sWriteLock, [this] {
-				return pLogWriteQueue.size() < kMaxQueueSize || bIsStopLogging;
-				});
-			if (bIsStopLogging) return;
+				return pLogWriteQueue.size() < kMaxQueueSize;
+			});
+			
 			pLogWriteQueue.push({ sTypeVal, sMessage });
+			//std::wcerr << L"[WriteLogContent] Pushed (Block), queue size: " << pLogWriteQueue.size() << std::endl;
 		}
 		else if (queueFullStrategy == LogQueueFullStrategy::DropOldest) {
 			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
+			std::wcerr << L"[WriteLogContent] Try push (DropOldest), queue size: " << pLogWriteQueue.size() << std::endl;
 			if (pLogWriteQueue.size() >= kMaxQueueSize) {
+				std::wcerr << L"[WriteLogContent] Drop oldest, queue full: " << pLogWriteQueue.size() << std::endl;
 				pLogWriteQueue.pop();
 				++discardCount;
 				if (discardCount - lastReportedDiscardCount >= reportInterval) {
@@ -127,14 +119,16 @@ public:
 				}
 			}
 			pLogWriteQueue.push({ sTypeVal, sMessage });
+			std::wcout << L"[WriteLogContent] Pushed (DropOldest), queue size: " << pLogWriteQueue.size() << std::endl;
 		}
 		pWritedCondVar.notify_one();
 
-		// 防止递归死循环
 		if (bNeedReport && !inErrorReport) {
 			inErrorReport = true;
-			WriteLogContent(L"LOG_OVERFLOW",
-				L"The log queue overflows and has been discarded " + std::to_wstring(currentDiscard) + L" logs");
+			std::wstring overflowMsg = L"The log queue overflows and has been discarded "
+				+ std::to_wstring(currentDiscard) + L" logs";
+			std::wcerr << L"[WriteLogContent] Report overflow: " << overflowMsg << std::endl;
+			WriteLogContent(L"LOG_OVERFLOW", overflowMsg);
 			inErrorReport = false;
 		}
 	}
@@ -176,7 +170,7 @@ private:
 	{
 		bIsStopLogging = true;
 		pWritedCondVar.notify_all();
-		WriteLogContent(L"Stop log write thread", L"================================>");
+		WriteLogContent(L"<================================              Stop log write thread    ", L"================================>");
 		if (sWritedThreads.joinable()) sWritedThreads.join();//等待线程结束
 	}
 
@@ -198,11 +192,13 @@ private:
 			{
 				auto sLock = std::unique_lock<std::mutex>(pLogWriteMutex);
 				pWritedCondVar.wait(sLock, [this] {return !pLogWriteQueue.empty() || bIsStopLogging; });
-				if (bIsStopLogging && pLogWriteQueue.empty()) break;//如果停止标志为真且队列为空，则退出线程
+
+				if (bIsStopLogging && pLogWriteQueue.empty()) break;  //如果停止标志为真且队列为空，则退出线程
 				if (!pLogWriteQueue.empty()) {
 					sLogMessageInf = pLogWriteQueue.front();
 					pLogWriteQueue.pop();
-					std::cerr << "pop:" << Ucs4ConvertToUtf8(sLogMessageInf.sLogContentVal) << "\n";
+					pWritedCondVar.notify_one();
+					
 				}
 			}
 			if (!sLogMessageInf.sLogContentVal.empty() && pLogFileStream.is_open())
@@ -261,5 +257,6 @@ private:
 	std::atomic<size_t>                   lastReportedDiscardCount;  // 上次报告后丢弃条数
 	std::atomic<size_t>                             reportInterval;  // 报告间隔
 	std::atomic<bool>                                  bNeedReport;  // 是否需要报告
+	
 };
 
