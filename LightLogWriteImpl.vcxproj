@@ -133,7 +133,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="convet_tools.cpp" />
-    <ClCompile Include="LightLogWriteImpl.cpp" />
+    <ClCompile Include="LightLogWriteImpl.hpp" />
+    <ClCompile Include="LockFreeLogWriteImpl.hpp" />
+    <ClCompile Include="源.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="convert_tools.h" />

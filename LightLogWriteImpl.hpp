@@ -12,6 +12,7 @@
 #include <ostream>
 #include <sstream>
 #include <iomanip>
+#include <memory>
 #include <filesystem>
 #include <vector>
 #include <stdexcept>
@@ -32,6 +33,7 @@ enum class LogQueueFullStrategy {
 	Block,      // 阻塞等待
 	DropOldest  // 丢弃最旧日志
 };
+
 
 
 class LightLogWrite_Impl {
@@ -261,61 +263,3 @@ private:
 	std::atomic<bool>                                  bNeedReport;  // 是否需要报告
 };
 
-
-
-// 测试日志文件创建和写入
-void TestLogFileCreation() {
-	LightLogWrite_Impl logger;
-
-	logger.SetLogsFileName(L"test_log.txt");
-	logger.WriteLogContent(L"INFO", L"This is a test info  log message.");
-	std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待日志写入完成
-	std::cout << "TestLogFileCreation: Log file created and message written.\n";
-}
-
-// 测试多线程日志写入
-void TestMultiThreadLogging() {
-	LightLogWrite_Impl logger;
-	logger.SetLogsFileName(L"multi_thread_log.txt");
-
-	auto logTask = [&logger](int threadId) {
-		for (int i = 0; i < 5; ++i) {
-			std::wstring message = L"Thread " + std::to_wstring(threadId) + L" - Log " + std::to_wstring(i);
-			logger.WriteLogContent(L"TestMultiThreadLogging", message);
-			std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 模拟延迟
-		}
-		};
-
-	std::vector<std::thread> threads;
-	for (int i = 0; i < 5; ++i) {
-		threads.emplace_back(logTask, i + 1);
-	}
-
-	for (auto& t : threads) {
-		t.join();
-	}
-
-	std::cout << "TestMultiThreadLogging: Log messages written from multiple threads.\n";
-}
-
-// 测试日志持久化功能
-void TestLogLasting() {
-	LightLogWrite_Impl logger;
-	logger.SetLastingsLogs(L"./logs", L"test_log_");
-	logger.WriteLogContent(L"TestLogLasting", L"This is a persistent log message.");
-	logger.WriteLogContent(L"     INFO     ", L"This is a debug log message.");
-	std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待日志写入完成
-}
-
-// 主函数，运行所有测试
-int main() {
-	try {
-		TestLogFileCreation();
-
-		TestLogLasting();
-	}
-	catch (const std::exception& e) {
-		std::cerr << "Test failed: " << e.what() << std::endl;
-	}
-	return 0;
-}

@@ -19,3 +19,5 @@ Release/
 third/
 logs/
 LightLog.1ac2c014/
+lockfree_test_output.log
+test_log.txt

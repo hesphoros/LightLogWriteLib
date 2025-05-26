@@ -15,11 +15,17 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LightLogWriteImpl.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="convet_tools.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="源.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LockFreeLogWriteImpl.hpp">
+      <Filter>头文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LightLogWriteImpl.hpp">
+      <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
