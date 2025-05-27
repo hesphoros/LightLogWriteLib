@@ -45,3 +45,21 @@
 在使用4个线程同时写入 每个线程写入100 0000条日志的情况下
 
 ![image-20250527140117287](https://cdn.jsdelivr.net/gh/hesphoros/blogimages@main/img/image-20250527140117287.png)
+
+# release
+
+4 线程 每线程100 0000数据时
+
+![image-20250528014041803](https://cdn.jsdelivr.net/gh/hesphoros/blogimages@main/img/image-20250528014041803.png)
+
+up队列上限为50 0000 后  
+
+![image-20250528015954799](https://cdn.jsdelivr.net/gh/hesphoros/blogimages@main/img/image-20250528015954799.png)
+
+测试2 快了6s
+
+![image-20250528020353446](https://cdn.jsdelivr.net/gh/hesphoros/blogimages@main/img/image-20250528020353446.png)
+
+测试3 快5s
+
+![image-20250528020741507](https://cdn.jsdelivr.net/gh/hesphoros/blogimages@main/img/image-20250528020741507.png)

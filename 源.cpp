@@ -1,23 +1,11 @@
-#include <iostream>
-#include <thread>
-#include <vector>
-#include <chrono>
-#include <string>
-#include "LightLogWriteImpl.hpp"        // 假设这是原始实现头文件
-#include "LockFreeLogWriteImpl.hpp"     // 假设这是无锁队列实现头文件
+#include "include/LightLogWriteImpl.hpp"
+#include "include/LockFreeLogWriteImpl.hpp"
 
-/*
- * 修正要点:
- * 原错误提示是因为 LockFreeLogWriteImpl 中包含 const 数据成员 (kMaxQueueSize)，
- * 导致编译器隐式删除了拷贝赋值运算符。若在模板函数中使用了类似 "logger = tmpLogger" 的方式，
- * 则会触发尝试引用已删除的函数。
- *
- * 下面的示例避免了在模板里对 logger 进行多次赋值，而是直接通过构造函数创建最终对象，
- * 从而避免 “= std::move(...)” 的操作。
- */
+using namespace LightLogWrite;
+using namespace LockFreeLogWriteImpl;
 
  // 配置测试参数
-    static const int NUM_THREADS = 4;       // 并发线程数
+static const int NUM_THREADS = 4;       // 并发线程数
 static const int LINES_PER_THREAD = 100000;   // 每个线程写入日志条数
 
 // 根据需要切换使用哪种策略
@@ -29,7 +17,7 @@ double MeasureLogPerformance(const std::wstring& testName, const std::wstring& o
     
     LogImplClass logger(
         /*maxQueueSize=*/100,
-        (USE_BLOCK_STRATEGY ? LogQueueFullStrategy::Block : LogQueueFullStrategy::DropOldest),
+        (USE_BLOCK_STRATEGY ? 0 : 1),
         /*reportInterval=*/100
     );
 

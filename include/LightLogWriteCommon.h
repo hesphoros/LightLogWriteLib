@@ -24,7 +24,7 @@
  * * It contains the actual log message that will be written to the log file.
  * * This can include any relevant information that needs to be logged, such as error messages, status updates, etc.
  */
-struct LightLogWrite_Info {
+struct LightLogWriteInfo {
 	std::wstring                   sLogTagNameVal;  /*!< Log tag name */
 	std::wstring                   sLogContentVal;  /*!< Log content */
 };
@@ -40,7 +40,7 @@ struct LightLogWrite_Info {
  * * When the queue is full, the oldest log entry will be removed to make space for the new log entry.
  * * This strategy allows for continuous logging without blocking, but may result in loss of older log entries.
  */
-enum class LogQueueFullStrategy {
+enum class LogQueueOverflowStrategy {
 	Block,      /*!< Blocked waiting           */
 	DropOldest  /*!< Drop the oldest log entry */
 };

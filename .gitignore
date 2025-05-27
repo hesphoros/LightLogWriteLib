@@ -24,3 +24,4 @@ test_log.txt
 LightLogWriteImpl_result.log
 LockFreeLogWriteImpl_result.log
 LightLogWriteImpl.vcxproj.user
+LightLogWriteImpl/
