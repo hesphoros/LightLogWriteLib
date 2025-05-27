@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LOCK_FREE_LOG_WRITE_IMPL_HPP
+#define LOCK_FREE_LOG_WRITE_IMPL_HPP
 
 #include <iostream>
 #include <string>
@@ -10,12 +11,198 @@
 #include <filesystem>
 #include <vector>
 #include <stdexcept>
+#include <cstddef>
 #include "iconv.h"
 #include "convert_tools.h"
-#include "LightLogWriteCommon.h"
-#include "LockFreeQueue.hpp" 
-
 #pragma comment ( lib,"libiconv.lib" )
+
+
+
+/**
+ * @brief Structure for log message information.
+ * @param sLogTagNameVal The tag name of the log.
+ * * It can be used to categorize or identify the log message.
+ * * such as INFO , WARNING, ERROR, etc.
+ * @param sLogContentVal The content of the log message.
+ * * It contains the actual log message that will be written to the log file.
+ * * This can include any relevant information that needs to be logged, such as error messages, status updates, etc.
+ */
+struct LightLogWrite_Info {
+	std::wstring                   sLogTagNameVal;  /*!< Log tag name */
+	std::wstring                   sLogContentVal;  /*!< Log content */
+};
+
+/**
+ * @brief Enum for strategies to handle full log queues.
+ * @details
+ * * This enum defines the strategies that can be used when the log queue is full.
+ * * It provides options for blocking until space is available or dropping the oldest log entry.
+ * @param Block Blocked waiting for space in the queue.
+ * * When the queue is full, the logging operation will block until space becomes available.
+ * @param DropOldest Drop the oldest log entry when the queue is full.
+ * * When the queue is full, the oldest log entry will be removed to make space for the new log entry.
+ * * This strategy allows for continuous logging without blocking, but may result in loss of older log entries.
+ */
+enum class LogQueueFullStrategy {
+	Block,      /*!< Blocked waiting           */
+	DropOldest  /*!< Drop the oldest log entry */
+};
+
+
+/**
+ * @brief Converts a UTF-8 encoded string to UCS-4 (UTF-32) encoded wide string
+ * @param utf8str The UTF-8 encoded string to be converted
+ * @return A wide string (std::wstring) representing the UCS-4 encoded string
+ * @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
+ */
+inline std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
+	try {
+
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		return converter.from_bytes(utf8str);
+	} catch (const std::range_error& e) {
+		throw std::runtime_error("Failed to convert UTF-8 to UCS-4: " + std::string(e.what()));
+	}
+}
+
+/**
+ * @brief Converts a UCS-4 (UTF-32) encoded wide string to UTF-8 encoded string
+ * @param wstr The UCS-4 encoded wide string to be converted
+ * @return A UTF-8 encoded string (std::string) representing the converted wide string
+ * @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
+ */
+inline std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
+	try {
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		return converter.to_bytes(wstr);
+	}
+	catch (const std::range_error& e) {
+		throw std::runtime_error("Failed to convert UCS-4 to UTF-8: " + std::string(e.what()));
+	}
+}
+
+/**
+ * @brief Converts a UTF-16 encoded string to a wide string (UCS-4)
+ * @param u16str The UTF-16 encoded string to be converted
+ * @return A wide string (std::wstring) representing the UCS-4 encoded string
+ * @details This function uses std::wstring_convert with std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian> to perform the conversion.
+ */
+inline std::wstring U16StringToWString(const std::u16string& u16str) {
+	std::wstring wstr;
+#ifdef _WIN32
+	wstr.assign(u16str.begin(), u16str.end());
+#else
+	std::wstring_convert<
+	std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>>
+	converter;
+	wstr = converter.from_bytes(
+		reinterpret_cast<const char*>(u16str.data()),
+		reinterpret_cast<const char*>(u16str.data() + u16str.size()));
+#endif
+	return wstr;
+}
+
+
+
+/**
+ * @brief A lock-free queue implementation using atomic operations
+ * * This queue is designed to be used in a multi-threaded environment where multiple threads can push and pop elements concurrently without locks.
+ * @param T The type of elements stored in the queue
+ * @details The queue uses a fixed-size array of nodes, each containing an atomic tail and head index to manage the queue state.
+ * * The queue supports push and pop operations, where push adds an element to the end of the queue and pop removes an element from the front.
+ * * The queue is designed to be lock-free, meaning that it does not use mutexes or other locking mechanisms to ensure thread safety.
+ * * The queue is implemented using a circular buffer, where the capacity is a power of two to optimize index calculations.
+ */
+template <typename T>
+class LockFreeQueue {
+public:
+	explicit LockFreeQueue(size_t capacity)
+	{
+		_capacityMask = capacity - 1;
+		for (size_t i = 1; i <= sizeof(void*) * 4; i <<= 1)
+			_capacityMask |= _capacityMask >> i;
+		_capacity = _capacityMask + 1;
+
+		_queue = (Node*)new char[sizeof(Node) * _capacity];
+		for (size_t i = 0; i < _capacity; ++i)
+		{
+			_queue[i].tail.store(i, std::memory_order_relaxed);
+			_queue[i].head.store(-1, std::memory_order_relaxed);
+		}
+
+		_tail.store(0, std::memory_order_relaxed);
+		_head.store(0, std::memory_order_relaxed);
+	}
+
+	~LockFreeQueue()
+	{
+		for (size_t i = _head; i != _tail; ++i)
+			(&_queue[i & _capacityMask].data)->~T();
+
+		delete[](char*)_queue;
+	}
+
+	size_t capacity() const { return _capacity; }
+
+	size_t size() const
+	{
+		size_t head = _head.load(std::memory_order_acquire);
+		return _tail.load(std::memory_order_relaxed) - head;
+	}
+
+	bool push(const T& data)
+	{
+		Node* node;
+		size_t tail = _tail.load(std::memory_order_relaxed);
+		for (;;)
+		{
+			node = &_queue[tail & _capacityMask];
+			if (node->tail.load(std::memory_order_relaxed) != tail)
+				return false;
+			if ((_tail.compare_exchange_weak(tail, tail + 1, std::memory_order_relaxed)))
+				break;
+		}
+		new (&node->data)T(data);
+		node->head.store(tail, std::memory_order_release);
+		return true;
+	}
+
+	bool pop(T& result)
+	{
+		Node* node;
+		size_t head = _head.load(std::memory_order_relaxed);
+		for (;;)
+		{
+			node = &_queue[head & _capacityMask];
+			if (node->head.load(std::memory_order_relaxed) != head)
+				return false;
+			if (_head.compare_exchange_weak(head, head + 1, std::memory_order_relaxed))
+				break;
+		}
+		result = node->data;
+		(&node->data)->~T();
+		node->tail.store(head + _capacity, std::memory_order_release);
+		return true;
+	}
+
+private:
+	struct Node
+	{
+		T data;
+		std::atomic<size_t> tail;
+		std::atomic<size_t> head;
+	};
+
+private:
+	size_t                _capacityMask;
+	Node                  *_queue;
+	size_t                _capacity;
+	char                  cacheLinePad1[64];
+	std::atomic<size_t>   _tail;
+	char                  cacheLinePad2[64];
+	std::atomic<size_t>   _head;
+	char                  cacheLinePad3[64];
+};
 
 class LockFreeLogWriteImpl {
 public:
@@ -30,7 +217,7 @@ public:
 		bHasLogLasting{ false },
 		pLogWriteQueue(maxQueueSize) 
 	{
-		sWritedThreads = std::thread(&LockFreeLogWriteImpl::RunWriteThread, this);
+		sWrittenThreads = std::thread(&LockFreeLogWriteImpl::RunWriteThread, this);
 	}
 
 	~LockFreeLogWriteImpl() {
@@ -92,7 +279,7 @@ public:
 				}
 			}
 		}
-		pWritedCondVar.notify_one();
+		pWrittenCondVar.notify_one();
 
 		if (bNeedReport && !inErrorReport) {
 			inErrorReport = true;
@@ -133,9 +320,9 @@ private:
 
 	void CloseLogStream() {
 		bIsStopLogging = true;
-		pWritedCondVar.notify_all();
+		pWrittenCondVar.notify_all();
 		WriteLogContent(L"<================================              Stop log write thread    ", L"================================>");
-		if (sWritedThreads.joinable()) sWritedThreads.join();
+		if (sWrittenThreads.joinable()) sWrittenThreads.join();
 	}
 
 	void CreateLogsFile() {
@@ -215,9 +402,9 @@ private:
 	std::wofstream pLogFileStream; // 日志文件流
 	std::mutex fileMutex; // 文件写入保护锁（只有文件相关，队列无锁）
 	LockFreeQueue<LightLogWrite_Info> pLogWriteQueue; // 无锁队列
-	std::condition_variable pWritedCondVar; // 条件变量，线程同步
+	std::condition_variable pWrittenCondVar; // 条件变量，线程同步
 
-	std::thread sWritedThreads;
+	std::thread sWrittenThreads;
 	std::atomic<bool> bIsStopLogging;
 	std::wstring sLogLastingDir;
 	std::wstring sLogsBasedName;
@@ -230,3 +417,5 @@ private:
 	std::atomic<size_t> reportInterval;
 	std::atomic<bool> bNeedReport;
 };
+
+#endif //  !LOCK_FREE_LOG_WRITE_IMPL_HPP
