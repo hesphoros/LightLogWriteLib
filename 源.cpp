@@ -21,14 +21,14 @@
 static const int LINES_PER_THREAD = 100000;   // 每个线程写入日志条数
 
 // 根据需要切换使用哪种策略
-static const bool USE_BLOCK_STRATEGY = true; // 或 false
+static const bool USE_BLOCK_STRATEGY = false; // 或 false
 
 template <typename LogImplClass>
 double MeasureLogPerformance(const std::wstring& testName, const std::wstring& outFilename)
 {
     
     LogImplClass logger(
-        /*maxQueueSize=*/100000,
+        /*maxQueueSize=*/100,
         (USE_BLOCK_STRATEGY ? LogQueueFullStrategy::Block : LogQueueFullStrategy::DropOldest),
         /*reportInterval=*/100
     );

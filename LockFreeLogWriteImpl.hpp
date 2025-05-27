@@ -13,7 +13,7 @@
 #include "iconv.h"
 #include "convert_tools.h"
 #include "LightLogWriteCommon.h"
-#include "LockFreeQueue.hpp" // 引入 lockfree 队列
+#include "LockFreeQueue.hpp" 
 
 #pragma comment ( lib,"libiconv.lib" )
 
@@ -28,7 +28,7 @@ public:
 		queueFullStrategy(strategy),
 		reportInterval(reportInterval),
 		bHasLogLasting{ false },
-		pLogWriteQueue(maxQueueSize) // 初始化无锁队列容量
+		pLogWriteQueue(maxQueueSize) 
 	{
 		sWritedThreads = std::thread(&LockFreeLogWriteImpl::RunWriteThread, this);
 	}
@@ -98,7 +98,7 @@ public:
 			inErrorReport = true;
 			std::wstring overflowMsg = L"The log queue overflows and has been discarded "
 				+ std::to_wstring(currentDiscard) + L" logs";
-			std::wcerr << L"[WriteLogContent] Report overflow: " << overflowMsg << std::endl;
+			//std::wcerr << L"[WriteLogContent] Report overflow: " << overflowMsg << std::endl;
 			WriteLogContent(L"LOG_OVERFLOW", overflowMsg);
 			inErrorReport = false;
 		}
@@ -148,29 +148,40 @@ private:
 
 	void RunWriteThread() {
 		while (true) {
-			if (bHasLogLasting)
-				if (bLastingTmTags != (GetCurrsTimerTm().tm_hour > 12))
+			// 检查是否需要切换日志文件（AM/PM切换）
+			if (bHasLogLasting) {
+				bool isCurrentPM = (GetCurrsTimerTm().tm_hour > 12);
+				if (bLastingTmTags != isCurrentPM) {
 					CreateLogsFile();
+				}
+			}
 
 			LightLogWrite_Info sLogMessageInf;
+			bool hasLog = pLogWriteQueue.pop(sLogMessageInf);
 
-			// pop 等待日志数据
-			while (!pLogWriteQueue.pop(sLogMessageInf)) {
-				if (bIsStopLogging)
-					break;
+			// 只有在停止标志为真且队列为空时才退出
+			if (bIsStopLogging && pLogWriteQueue.size() == 0 && !hasLog) {
+				break;
+			}
+
+			// 写入日志内容到文件
+			if (hasLog && !sLogMessageInf.sLogContentVal.empty() && pLogFileStream.is_open()) {
+				pLogFileStream << sLogMessageInf.sLogTagNameVal
+					<< L"-//>>>" << GetCurrentTimer()
+					<< L" : " << sLogMessageInf.sLogContentVal << L"\n";
+			}
+			else if (!hasLog) {
+				// 队列为空，避免忙等
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
-
-			if (bIsStopLogging && pLogWriteQueue.size() == 0)
-				break;
-
-			if (!sLogMessageInf.sLogContentVal.empty() && pLogFileStream.is_open()) {
-				pLogFileStream << sLogMessageInf.sLogTagNameVal << L"-//>>>" << GetCurrentTimer() << " : " << sLogMessageInf.sLogContentVal << "\n";
-			}
 		}
+
+		// 关闭日志文件流
 		pLogFileStream.close();
 		std::cerr << "Log write thread Exit\n";
 	}
+
+
 
 	void ChecksDirectory(const std::wstring& sFilename) {
 		std::filesystem::path sFullFileName(sFilename);

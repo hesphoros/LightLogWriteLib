@@ -27,7 +27,7 @@
 
 class LightLogWrite_Impl {
 public:
-	LightLogWrite_Impl(size_t maxQueueSize = 10000,LogQueueFullStrategy  strategy = LogQueueFullStrategy::Block , size_t reportInterval = 100)
+	LightLogWrite_Impl(size_t maxQueueSize = 10000, LogQueueFullStrategy  strategy = LogQueueFullStrategy::Block , size_t reportInterval = 100)
 		: 
 		kMaxQueueSize(maxQueueSize),
 		discardCount(0),
@@ -36,9 +36,7 @@ public:
 		bNeedReport{false},
 		queueFullStrategy(strategy),
 		reportInterval(reportInterval),
-		bHasLogLasting{false}
-	{
-		
+		bHasLogLasting{false}  {
 		sWritedThreads = std::thread(&LightLogWrite_Impl::RunWriteThread, this);
 	}
 
@@ -53,7 +51,7 @@ public:
 	void SetLogsFileName(const std::wstring& sFilename) {
 		std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
 		if (pLogFileStream.is_open()) pLogFileStream.close();
-		ChecksDirectory(sFilename);  //确保目录存在
+		ChecksDirectory(sFilename);  //  确保目录存在
 		pLogFileStream.open(sFilename, std::ios::app);
 	}
 
@@ -107,9 +105,9 @@ public:
 		}
 		else if (queueFullStrategy == LogQueueFullStrategy::DropOldest) {
 			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
-			std::wcerr << L"[WriteLogContent] Try push (DropOldest), queue size: " << pLogWriteQueue.size() << std::endl;
+			//std::wcerr << L"[WriteLogContent] Try push (DropOldest), queue size: " << pLogWriteQueue.size() << std::endl;
 			if (pLogWriteQueue.size() >= kMaxQueueSize) {
-				std::wcerr << L"[WriteLogContent] Drop oldest, queue full: " << pLogWriteQueue.size() << std::endl;
+				//std::wcerr << L"[WriteLogContent] Drop oldest, queue full: " << pLogWriteQueue.size() << std::endl;
 				pLogWriteQueue.pop();
 				++discardCount;
 				if (discardCount - lastReportedDiscardCount >= reportInterval) {
@@ -119,7 +117,7 @@ public:
 				}
 			}
 			pLogWriteQueue.push({ sTypeVal, sMessage });
-			std::wcout << L"[WriteLogContent] Pushed (DropOldest), queue size: " << pLogWriteQueue.size() << std::endl;
+			//std::wcout << L"[WriteLogContent] Pushed (DropOldest), queue size: " << pLogWriteQueue.size() << std::endl;
 		}
 		pWritedCondVar.notify_one();
 
@@ -127,7 +125,7 @@ public:
 			inErrorReport = true;
 			std::wstring overflowMsg = L"The log queue overflows and has been discarded "
 				+ std::to_wstring(currentDiscard) + L" logs";
-			std::wcerr << L"[WriteLogContent] Report overflow: " << overflowMsg << std::endl;
+			//std::wcerr << L"[WriteLogContent] Report overflow: " << overflowMsg << std::endl;
 			WriteLogContent(L"LOG_OVERFLOW", overflowMsg);
 			inErrorReport = false;
 		}
@@ -211,11 +209,9 @@ private:
 	}
 
 	void ChecksDirectory(const std::wstring& sFilename) {
-		
 		std::filesystem::path sFullFileName(sFilename);
 		std::filesystem::path sOutFilesPath = sFullFileName.parent_path();
-		if (!sOutFilesPath.empty() && !std::filesystem::exists(sOutFilesPath))
-		{
+		if (!sOutFilesPath.empty() && !std::filesystem::exists(sOutFilesPath)) {
 			std::filesystem::create_directories(sOutFilesPath);
 		}
 	}
@@ -257,6 +253,5 @@ private:
 	std::atomic<size_t>                   lastReportedDiscardCount;  // 上次报告后丢弃条数
 	std::atomic<size_t>                             reportInterval;  // 报告间隔
 	std::atomic<bool>                                  bNeedReport;  // 是否需要报告
-	
 };
 
