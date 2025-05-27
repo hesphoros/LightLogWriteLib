@@ -194,16 +194,22 @@ private:
 	};
 
 private:
-	size_t                _capacityMask;
-	Node                  *_queue;
-	size_t                _capacity;
-	char                  cacheLinePad1[64];
-	std::atomic<size_t>   _tail;
-	char                  cacheLinePad2[64];
-	std::atomic<size_t>   _head;
-	char                  cacheLinePad3[64];
+	size_t                              _capacityMask;
+	Node                                *_queue;
+	size_t                               _capacity;
+	char                                 cacheLinePad1[64];
+	std::atomic<size_t>                  _tail;
+	char                                 cacheLinePad2[64];
+	std::atomic<size_t>                  _head;
+	char                                 cacheLinePad3[64];
 };
 
+/**
+ * @brief A lock-free log writing implementation
+ * * This class provides a thread-safe way to write logs to a file using a lock-free queue.
+ * * It allows multiple threads to write logs concurrently without blocking each other.
+ * @details The class uses a lock-free queue to store log messages and a separate thread to write them to a file.
+ */
 class LockFreeLogWriteImpl {
 public:
 	LockFreeLogWriteImpl(size_t maxQueueSize = 10000, LogQueueFullStrategy strategy = LogQueueFullStrategy::Block, size_t reportInterval = 100)
@@ -215,7 +221,7 @@ public:
 		queueFullStrategy(strategy),
 		reportInterval(reportInterval),
 		bHasLogLasting{ false },
-		pLogWriteQueue(maxQueueSize) 
+		pLogWriteQueue(maxQueueSize)
 	{
 		sWrittenThreads = std::thread(&LockFreeLogWriteImpl::RunWriteThread, this);
 	}
@@ -399,23 +405,28 @@ private:
 	}
 
 private:
-	std::wofstream pLogFileStream; // 日志文件流
-	std::mutex fileMutex; // 文件写入保护锁（只有文件相关，队列无锁）
-	LockFreeQueue<LightLogWrite_Info> pLogWriteQueue; // 无锁队列
-	std::condition_variable pWrittenCondVar; // 条件变量，线程同步
-
-	std::thread sWrittenThreads;
-	std::atomic<bool> bIsStopLogging;
-	std::wstring sLogLastingDir;
-	std::wstring sLogsBasedName;
-	std::atomic<bool> bHasLogLasting;
-	std::atomic<bool> bLastingTmTags;
-	const size_t kMaxQueueSize;
-	LogQueueFullStrategy queueFullStrategy;
-	std::atomic<size_t> discardCount;
-	std::atomic<size_t> lastReportedDiscardCount;
-	std::atomic<size_t> reportInterval;
-	std::atomic<bool> bNeedReport;
+	//------------------------------------------------------------------------------------------------------------------------
+	// Section Name: Private Members @{
+	//------------------------------------------------------------------------------------------------------------------------
+		std::wofstream                        pLogFileStream;            /*!< Log file stream                                */
+		std::mutex                            fileMutex;                 /*!< Mutex for file operations                      */
+		LockFreeQueue<LightLogWrite_Info>     pLogWriteQueue;            /*!< Lock-free queue for log messages               */
+		std::condition_variable               pWrittenCondVar;           /*!< Condition variable for waking log write thread */
+		std::thread                           sWrittenThreads;           /*!< Log write thread                               */
+		std::atomic<bool>                     bIsStopLogging;            /*!< Flag to stop logging                           */
+		std::wstring                          sLogLastingDir;            /*!< Directory for lasting logs                     */
+		std::wstring                          sLogsBasedName;            /*!< Base name for log files                        */
+		std::atomic<bool>                     bHasLogLasting;            /*!< Whether to persist logs                        */
+		std::atomic<bool>                     bLastingTmTags;            /*!< Whether the last log was AM or PM              */
+		const size_t                          kMaxQueueSize;             /*!< Maximum size of the log queue                  */
+		LogQueueFullStrategy                  queueFullStrategy;         /*!< Strategy for handling full log queue           */
+		std::atomic<size_t>                   discardCount;              /*!< Count of discarded logs                        */
+		std::atomic<size_t>                   lastReportedDiscardCount;  /*!< Last reported discard count                    */
+		std::atomic<size_t>                   reportInterval;            /*!< Interval for reporting discarded logs          */
+		std::atomic<bool>                     bNeedReport;               /*!< Flag to indicate if reporting is needed        */
+	//------------------------------------------------------------------------------------------------------------------------
+	// Section Name: Private Members @}
+	//------------------------------------------------------------------------------------------------------------------------
 };
 
 #endif //  !LOCK_FREE_LOG_WRITE_IMPL_HPP
