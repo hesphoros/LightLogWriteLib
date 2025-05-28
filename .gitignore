@@ -24,6 +24,10 @@ test_log.txt
 LightLogWriteImpl_result.log
 LockFreeLogWriteImpl_result.log
 LightLogWriteImpl.vcxproj.user
-LightLogWriteImpl/
+
 .gitignore
 assets/
+LightLogWriteImpl/.vs/
+LightLogWriteImpl/Debug/
+LightLogWriteImpl/Release/
+LightLogWriteImpl/x64/
