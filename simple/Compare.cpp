@@ -1,5 +1,5 @@
-#include "include/LightLogWriteImpl.hpp"
-#include "include/LockFreeLogWriteImpl.hpp"
+#include "LightLogWriteImpl.hpp"
+#include "LockFreeLogWriteImpl.hpp"
 
 using namespace LightLogWrite;
 using namespace LockFreeLogWriteImpl;
@@ -14,7 +14,7 @@ static const bool USE_BLOCK_STRATEGY = false; // »ò false
 template <typename LogImplClass>
 double MeasureLogPerformance(const std::wstring& testName, const std::wstring& outFilename)
 {
-    
+
     LogImplClass logger(
         /*maxQueueSize=*/100,
         (USE_BLOCK_STRATEGY ? 0 : 1),

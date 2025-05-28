@@ -2,50 +2,50 @@
 #include "LockFreeLogWriteImpl.hpp"
 
 /*
- * ¸ÃÊ¾ÀıÑİÊ¾¶àÏß³Ì²¢·¢Ïò LockFreeLogWriteImpl Ğ´ÈëÈÕÖ¾¡£
+ * è¯¥ç¤ºä¾‹æ¼”ç¤ºå¤šçº¿ç¨‹å¹¶å‘å‘ LockFreeLogWriteImpl å†™å…¥æ—¥å¿—ã€‚
  *
  */
 
- // Ö¸¶¨Ïß³ÌÊıÁ¿ÓëĞ´ÈÕÖ¾´ÎÊı
-static const int NUM_THREADS = 4;        // Ïß³ÌÊıÁ¿
-static const int LINES_PER_THREAD = 100; // Ã¿¸öÏß³ÌµÄÈÕÖ¾ÌõÊı
+ // æŒ‡å®šçº¿ç¨‹æ•°é‡ä¸å†™æ—¥å¿—æ¬¡æ•°
+static const int NUM_THREADS = 4;        // çº¿ç¨‹æ•°é‡
+static const int LINES_PER_THREAD = 100; // æ¯ä¸ªçº¿ç¨‹çš„æ—¥å¿—æ¡æ•°
 
 void LogThreadFunc(int threadId, LockFreeLogWriteImpl* pLogger) {
 	std::wstring tag = L"Thread_" + std::to_wstring(threadId);
 	for (int i = 0; i < LINES_PER_THREAD; ++i) {
-		// ¹¹ÔìÒªĞ´ÈëµÄÈÕÖ¾ĞÅÏ¢
+		// æ„é€ è¦å†™å…¥çš„æ—¥å¿—ä¿¡æ¯
 		std::wstring message = L"Log entry " + std::to_wstring(i) + L" from thread "
 			+ std::to_wstring(threadId);
-		// Ğ´ÈëÈÕÖ¾
+		// å†™å…¥æ—¥å¿—
 		pLogger->WriteLogContent(tag, message);
 
-		// ¼òµ¥ĞİÃß£¬Ä£ÄâÒµÎñ´¦Àí
+		// ç®€å•ä¼‘çœ ï¼Œæ¨¡æ‹Ÿä¸šåŠ¡å¤„ç†
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 	}
 }
 
 int TestLockFreeLogWriteImpl() {
-	// ´´½¨ÈÕÖ¾Ğ´Èë¶ÔÏó£¬²¢ÉèÖÃÈÕÖ¾ÎÄ¼şÃû
+	// åˆ›å»ºæ—¥å¿—å†™å…¥å¯¹è±¡ï¼Œå¹¶è®¾ç½®æ—¥å¿—æ–‡ä»¶å
 	LockFreeLogWriteImpl logger(/*maxQueueSize=*/5000,
 		LogQueueFullStrategy::Block,
 		/*reportInterval=*/10);
 
-	// ÉèÖÃÈÕÖ¾ÎÄ¼şÃû³Æ£¨¿É»»³ÉÄãµÄÂ·¾¶»òÎÄ¼şÇ°×º£©
+	// è®¾ç½®æ—¥å¿—æ–‡ä»¶åç§°ï¼ˆå¯æ¢æˆä½ çš„è·¯å¾„æˆ–æ–‡ä»¶å‰ç¼€ï¼‰
 	logger.SetLogsFileName(L"lockfree_test_output.log");
 
-	// ´´½¨²¢Æô¶¯Ïß³Ì½øĞĞ²¢·¢Ğ´ÈÕÖ¾
+	// åˆ›å»ºå¹¶å¯åŠ¨çº¿ç¨‹è¿›è¡Œå¹¶å‘å†™æ—¥å¿—
 	std::vector<std::thread> threads;
 	threads.reserve(NUM_THREADS);
 	for (int i = 0; i < NUM_THREADS; ++i) {
 		threads.emplace_back(LogThreadFunc, i, &logger);
 	}
 
-	// µÈ´ıËùÓĞÏß³ÌÍê³É
+	// ç­‰å¾…æ‰€æœ‰çº¿ç¨‹å®Œæˆ
 	for (auto& t : threads) {
 		t.join();
 	}
 
-	// ³ÌĞò½áÊøÊ±»áµ÷ÓÃ ~LockFreeLogWriteImpl()£¬È·±£ÈÕÖ¾Ïß³ÌÕı³£ÍË³ö
+	// ç¨‹åºç»“æŸæ—¶ä¼šè°ƒç”¨ ~LockFreeLogWriteImpl()ï¼Œç¡®ä¿æ—¥å¿—çº¿ç¨‹æ­£å¸¸é€€å‡º
 	std::wcout << L"All threads finished writing. Check 'lockfree_test_output.log' for output.\n";
 
 	return 0;

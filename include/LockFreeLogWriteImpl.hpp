@@ -19,8 +19,7 @@
 #include <filesystem>
 #include <vector>
 #include <stdexcept>
-#include "LightLogWriteCommon.h"
-#include "convert_tools.h"
+
 
 //#include "iconv.h"
 //#pragma comment ( lib,"libiconv.lib" )
@@ -52,65 +51,65 @@ struct LightLogWrite_Info {
 	* * When the queue is full, the oldest log entry will be removed to make space for the new log entry.
 	* * This strategy allows for continuous logging without blocking, but may result in loss of older log entries.
 	*/
-//enum class LogQueueOverflowStrategy {
-//	Block,      /*!< Blocked waiting           */
-//	DropOldest  /*!< Drop the oldest log entry */
-//};
+enum class LogQueueOverflowStrategy {
+	Block,      /*!< Blocked waiting           */
+	DropOldest  /*!< Drop the oldest log entry */
+};
 
-//
-///**
-//	* @brief Converts a UTF-8 encoded string to UCS-4 (UTF-32) encoded wide string
-//	* @param utf8str The UTF-8 encoded string to be converted
-//	* @return A wide string (std::wstring) representing the UCS-4 encoded string
-//	* @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
-//	*/
-//static inline std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
-//	try {
-//
-//		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-//		return converter.from_bytes(utf8str);
-//	}
-//	catch (const std::range_error& e) {
-//		throw std::runtime_error("Failed to convert UTF-8 to UCS-4: " + std::string(e.what()));
-//	}
-//}
-//
-//	/**
-//	* @brief Converts a UCS-4 (UTF-32) encoded wide string to UTF-8 encoded string
-//	* @param wstr The UCS-4 encoded wide string to be converted
-//	* @return A UTF-8 encoded string (std::string) representing the converted wide string
-//	* @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
-//	*/
-//static inline std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
-//	try {
-//		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-//		return converter.to_bytes(wstr);
-//	}
-//	catch (const std::range_error& e) {
-//		throw std::runtime_error("Failed to convert UCS-4 to UTF-8: " + std::string(e.what()));
-//	}
-//}
-//
-//	/**
-//		* @brief Converts a UTF-16 encoded string to a wide string (UCS-4)
-//		* @param u16str The UTF-16 encoded string to be converted
-//		* @return A wide string (std::wstring) representing the UCS-4 encoded string
-//		* @details This function uses std::wstring_convert with std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian> to perform the conversion.
-//		*/
-//static inline std::wstring U16StringToWString(const std::u16string& u16str) {
-//	std::wstring wstr;
-//#ifdef _WIN32
-//	wstr.assign(u16str.begin(), u16str.end());
-//#else
-//	std::wstring_convert<
-//		std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>>
-//		converter;
-//	wstr = converter.from_bytes(
-//		reinterpret_cast<const char*>(u16str.data()),
-//		reinterpret_cast<const char*>(u16str.data() + u16str.size()));
-//#endif
-//	return wstr;
-//}
+
+/**
+	* @brief Converts a UTF-8 encoded string to UCS-4 (UTF-32) encoded wide string
+	* @param utf8str The UTF-8 encoded string to be converted
+	* @return A wide string (std::wstring) representing the UCS-4 encoded string
+	* @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
+	*/
+static inline std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
+	try {
+
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		return converter.from_bytes(utf8str);
+	}
+	catch (const std::range_error& e) {
+		throw std::runtime_error("Failed to convert UTF-8 to UCS-4: " + std::string(e.what()));
+	}
+}
+
+	/**
+	* @brief Converts a UCS-4 (UTF-32) encoded wide string to UTF-8 encoded string
+	* @param wstr The UCS-4 encoded wide string to be converted
+	* @return A UTF-8 encoded string (std::string) representing the converted wide string
+	* @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
+	*/
+static inline std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
+	try {
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		return converter.to_bytes(wstr);
+	}
+	catch (const std::range_error& e) {
+		throw std::runtime_error("Failed to convert UCS-4 to UTF-8: " + std::string(e.what()));
+	}
+}
+
+	/**
+		* @brief Converts a UTF-16 encoded string to a wide string (UCS-4)
+		* @param u16str The UTF-16 encoded string to be converted
+		* @return A wide string (std::wstring) representing the UCS-4 encoded string
+		* @details This function uses std::wstring_convert with std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian> to perform the conversion.
+		*/
+static inline std::wstring U16StringToWString(const std::u16string& u16str) {
+	std::wstring wstr;
+#ifdef _WIN32
+	wstr.assign(u16str.begin(), u16str.end());
+#else
+	std::wstring_convert<
+		std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>>
+		converter;
+	wstr = converter.from_bytes(
+		reinterpret_cast<const char*>(u16str.data()),
+		reinterpret_cast<const char*>(u16str.data() + u16str.size()));
+#endif
+	return wstr;
+}
 
 
 
@@ -406,11 +405,11 @@ private:
 		auto sCurrentTime = std::chrono::system_clock::now();
 		std::time_t sCurrTimerTm = std::chrono::system_clock::to_time_t(sCurrentTime);
 		std::tm sCurrTmDatas;
-#ifdef _WIN32
+		#ifdef _WIN32
 		localtime_s(&sCurrTmDatas, &sCurrTimerTm);
-#else
+		#else
 		localtime_r(&sCurrTimerTm, &sCurrTmDatas);
-#endif
+		#endif
 		return sCurrTmDatas;
 	}
 
