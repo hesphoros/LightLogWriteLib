@@ -1,0 +1,83 @@
+\doxysection{include/\+Light\+Log\+Write\+Impl.hpp File Reference}
+\hypertarget{_light_log_write_impl_8hpp}{}\label{_light_log_write_impl_8hpp}\index{include/LightLogWriteImpl.hpp@{include/LightLogWriteImpl.hpp}}
+{\ttfamily \#include $<$iostream$>$}\newline
+{\ttfamily \#include $<$fstream$>$}\newline
+{\ttfamily \#include $<$sstream$>$}\newline
+{\ttfamily \#include $<$iomanip$>$}\newline
+{\ttfamily \#include $<$string$>$}\newline
+{\ttfamily \#include $<$vector$>$}\newline
+{\ttfamily \#include $<$queue$>$}\newline
+{\ttfamily \#include $<$mutex$>$}\newline
+{\ttfamily \#include $<$thread$>$}\newline
+{\ttfamily \#include $<$condition\+\_\+variable$>$}\newline
+{\ttfamily \#include $<$atomic$>$}\newline
+{\ttfamily \#include $<$chrono$>$}\newline
+{\ttfamily \#include $<$filesystem$>$}\newline
+{\ttfamily \#include $<$locale$>$}\newline
+{\ttfamily \#include $<$codecvt$>$}\newline
+{\ttfamily \#include $<$stdexcept$>$}\newline
+{\ttfamily \#include $<$memory$>$}\newline
+\doxysubsubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{struct_light_log_write_info}{Light\+Log\+Write\+Info}}
+\begin{DoxyCompactList}\small\item\em Structure for log message information. \end{DoxyCompactList}\item 
+class \mbox{\hyperlink{class_light_log_write___impl}{Light\+Log\+Write\+\_\+\+Impl}}
+\begin{DoxyCompactList}\small\item\em Implementation of the Light\+Log\+Write class. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum class \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{Log\+Queue\+Overflow\+Strategy}} \{ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{Block}}
+, \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}{Drop\+Oldest}}
+, \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{Block}}
+, \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}{Drop\+Oldest}}
+ \}
+\begin{DoxyCompactList}\small\item\em Enum for strategies to handle full log queues. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Enumeration Type Documentation}
+\Hypertarget{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}\index{LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}!LogQueueOverflowStrategy@{LogQueueOverflowStrategy}}
+\index{LogQueueOverflowStrategy@{LogQueueOverflowStrategy}!LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}}
+\doxysubsubsection{\texorpdfstring{LogQueueOverflowStrategy}{LogQueueOverflowStrategy}}
+{\footnotesize\ttfamily \label{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30} 
+enum class \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{Log\+Queue\+Overflow\+Strategy}}\hspace{0.3cm}{\ttfamily [strong]}}
+
+
+
+Enum for strategies to handle full log queues. 
+
+
+\begin{DoxyItemize}
+\item This enum defines the strategies that can be used when the log queue is full.
+\item It provides options for blocking until space is available or dropping the oldest log entry. 
+\begin{DoxyParams}{Parameters}
+{\em Block} & Blocked waiting for space in the queue.\\
+\hline
+\end{DoxyParams}
+
+\item When the queue is full, the logging operation will block until space becomes available. 
+\begin{DoxyParams}{Parameters}
+{\em Drop\+Oldest} & Drop the oldest log entry when the queue is full.\\
+\hline
+\end{DoxyParams}
+
+\item When the queue is full, the oldest log entry will be removed to make space for the new log entry.
+\item This strategy allows for continuous logging without blocking, but may result in loss of older log entries. 
+\end{DoxyItemize}\begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Block@{Block}!LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}}\index{LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}!Block@{Block}}}\Hypertarget{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}\label{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2} 
+Block&Blocked waiting \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{DropOldest@{DropOldest}!LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}}\index{LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}!DropOldest@{DropOldest}}}\Hypertarget{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}\label{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd} 
+Drop\+Oldest&Drop the oldest log entry \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Block@{Block}!LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}}\index{LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}!Block@{Block}}}\Hypertarget{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}\label{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2} 
+Block&Blocked waiting \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{DropOldest@{DropOldest}!LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}}\index{LightLogWriteImpl.hpp@{LightLogWriteImpl.hpp}!DropOldest@{DropOldest}}}\Hypertarget{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}\label{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd} 
+Drop\+Oldest&Drop the oldest log entry \\
+\hline
+
+\end{DoxyEnumFields}

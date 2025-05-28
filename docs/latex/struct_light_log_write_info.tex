@@ -1,0 +1,54 @@
+\doxysection{Light\+Log\+Write\+Info Struct Reference}
+\hypertarget{struct_light_log_write_info}{}\label{struct_light_log_write_info}\index{LightLogWriteInfo@{LightLogWriteInfo}}
+
+
+Structure for log message information.  
+
+
+
+
+{\ttfamily \#include $<$Light\+Log\+Write\+Impl.\+hpp$>$}
+
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+std\+::wstring \mbox{\hyperlink{struct_light_log_write_info_ac1f18363a301eec5a1e4cf87e649f5b8}{s\+Log\+Tag\+Name\+Val}}
+\item 
+std\+::wstring \mbox{\hyperlink{struct_light_log_write_info_ad69125a8a023e8aec477ed2936739a77}{s\+Log\+Content\+Val}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Structure for log message information. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em s\+Log\+Tag\+Name\+Val} & The tag name of the log.
+\begin{DoxyItemize}
+\item It can be used to categorize or identify the log message.
+\item such as INFO , WARNING, ERROR, etc. 
+\end{DoxyItemize}\\
+\hline
+{\em s\+Log\+Content\+Val} & The content of the log message.
+\begin{DoxyItemize}
+\item It contains the actual log message that will be written to the log file.
+\item This can include any relevant information that needs to be logged, such as error messages, status updates, etc. 
+\end{DoxyItemize}\\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\Hypertarget{struct_light_log_write_info_ad69125a8a023e8aec477ed2936739a77}\index{LightLogWriteInfo@{LightLogWriteInfo}!sLogContentVal@{sLogContentVal}}
+\index{sLogContentVal@{sLogContentVal}!LightLogWriteInfo@{LightLogWriteInfo}}
+\doxysubsubsection{\texorpdfstring{sLogContentVal}{sLogContentVal}}
+{\footnotesize\ttfamily \label{struct_light_log_write_info_ad69125a8a023e8aec477ed2936739a77} 
+std\+::wstring Light\+Log\+Write\+Info\+::s\+Log\+Content\+Val}
+
+Log content \Hypertarget{struct_light_log_write_info_ac1f18363a301eec5a1e4cf87e649f5b8}\index{LightLogWriteInfo@{LightLogWriteInfo}!sLogTagNameVal@{sLogTagNameVal}}
+\index{sLogTagNameVal@{sLogTagNameVal}!LightLogWriteInfo@{LightLogWriteInfo}}
+\doxysubsubsection{\texorpdfstring{sLogTagNameVal}{sLogTagNameVal}}
+{\footnotesize\ttfamily \label{struct_light_log_write_info_ac1f18363a301eec5a1e4cf87e649f5b8} 
+std\+::wstring Light\+Log\+Write\+Info\+::s\+Log\+Tag\+Name\+Val}
+
+Log tag name 

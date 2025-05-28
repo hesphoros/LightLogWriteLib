@@ -1,0 +1,92 @@
+\doxysection{Lock\+Free\+Queue\texorpdfstring{$<$}{<} T \texorpdfstring{$>$}{>} Class Template Reference}
+\hypertarget{class_lock_free_queue}{}\label{class_lock_free_queue}\index{LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}}
+
+
+A lock-\/free queue implementation using atomic operations.  
+
+
+
+
+{\ttfamily \#include $<$Lock\+Free\+Log\+Write\+Impl.\+hpp$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{class_lock_free_queue_ad831e1419e0633c28aa266976e085d68}{Lock\+Free\+Queue}} (size\+\_\+t \mbox{\hyperlink{class_lock_free_queue_aa8203313789866b0cc7a22421d36076c}{capacity}})
+\item 
+\mbox{\hyperlink{class_lock_free_queue_a990f9dbba984ee1ff71bd527daa8950d}{\texorpdfstring{$\sim$}{\string~}\+Lock\+Free\+Queue}} ()
+\item 
+size\+\_\+t \mbox{\hyperlink{class_lock_free_queue_aa8203313789866b0cc7a22421d36076c}{capacity}} () const
+\item 
+size\+\_\+t \mbox{\hyperlink{class_lock_free_queue_aa72a9fcaa535adbcd3b9daa88f3f35a9}{size}} () const
+\item 
+bool \mbox{\hyperlink{class_lock_free_queue_a68a406c12d337a7b17f25b26e8742442}{push}} (const T \&data)
+\item 
+bool \mbox{\hyperlink{class_lock_free_queue_ac163115f251d9a53f96cbe5f545e905c}{pop}} (T \&result)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename T$>$\newline
+class Lock\+Free\+Queue$<$ T $>$}
+A lock-\/free queue implementation using atomic operations. 
+
+
+\begin{DoxyItemize}
+\item This queue is designed to be used in a multi-\/threaded environment where multiple threads can push and pop elements concurrently without locks. 
+\begin{DoxyParams}{Parameters}
+{\em T} & The type of elements stored in the queue\\
+\hline
+\end{DoxyParams}
+The queue uses a fixed-\/size array of nodes, each containing an atomic tail and head index to manage the queue state.
+\item The queue supports push and pop operations, where push adds an element to the end of the queue and pop removes an element from the front.
+\item The queue is designed to be lock-\/free, meaning that it does not use mutexes or other locking mechanisms to ensure thread safety.
+\item The queue is implemented using a circular buffer, where the capacity is a power of two to optimize index calculations. 
+\end{DoxyItemize}
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\Hypertarget{class_lock_free_queue_ad831e1419e0633c28aa266976e085d68}\index{LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}!LockFreeQueue@{LockFreeQueue}}
+\index{LockFreeQueue@{LockFreeQueue}!LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{LockFreeQueue()}{LockFreeQueue()}}
+{\footnotesize\ttfamily \label{class_lock_free_queue_ad831e1419e0633c28aa266976e085d68} 
+template$<$typename T$>$ \\
+\mbox{\hyperlink{class_lock_free_queue}{Lock\+Free\+Queue}}$<$ T $>$\mbox{\hyperlink{class_lock_free_queue}{\+::\+Lock\+Free\+Queue}} (\begin{DoxyParamCaption}\item[{size\+\_\+t}]{capacity}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [explicit]}}
+
+\Hypertarget{class_lock_free_queue_a990f9dbba984ee1ff71bd527daa8950d}\index{LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}!````~LockFreeQueue@{\texorpdfstring{$\sim$}{\string~}LockFreeQueue}}
+\index{````~LockFreeQueue@{\texorpdfstring{$\sim$}{\string~}LockFreeQueue}!LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{\texorpdfstring{$\sim$}{\string~}LockFreeQueue()}{\string~LockFreeQueue()}}
+{\footnotesize\ttfamily \label{class_lock_free_queue_a990f9dbba984ee1ff71bd527daa8950d} 
+template$<$typename T$>$ \\
+\mbox{\hyperlink{class_lock_free_queue}{Lock\+Free\+Queue}}$<$ T $>$\+::\texorpdfstring{$\sim$}{\string~}\mbox{\hyperlink{class_lock_free_queue}{Lock\+Free\+Queue}} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\Hypertarget{class_lock_free_queue_aa8203313789866b0cc7a22421d36076c}\index{LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}!capacity@{capacity}}
+\index{capacity@{capacity}!LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{capacity()}{capacity()}}
+{\footnotesize\ttfamily \label{class_lock_free_queue_aa8203313789866b0cc7a22421d36076c} 
+template$<$typename T$>$ \\
+size\+\_\+t \mbox{\hyperlink{class_lock_free_queue}{Lock\+Free\+Queue}}$<$ T $>$\+::capacity (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_lock_free_queue_ac163115f251d9a53f96cbe5f545e905c}\index{LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}!pop@{pop}}
+\index{pop@{pop}!LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{pop()}{pop()}}
+{\footnotesize\ttfamily \label{class_lock_free_queue_ac163115f251d9a53f96cbe5f545e905c} 
+template$<$typename T$>$ \\
+bool \mbox{\hyperlink{class_lock_free_queue}{Lock\+Free\+Queue}}$<$ T $>$\+::pop (\begin{DoxyParamCaption}\item[{T \&}]{result}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_lock_free_queue_a68a406c12d337a7b17f25b26e8742442}\index{LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}!push@{push}}
+\index{push@{push}!LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{push()}{push()}}
+{\footnotesize\ttfamily \label{class_lock_free_queue_a68a406c12d337a7b17f25b26e8742442} 
+template$<$typename T$>$ \\
+bool \mbox{\hyperlink{class_lock_free_queue}{Lock\+Free\+Queue}}$<$ T $>$\+::push (\begin{DoxyParamCaption}\item[{const T \&}]{data}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\Hypertarget{class_lock_free_queue_aa72a9fcaa535adbcd3b9daa88f3f35a9}\index{LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}!size@{size}}
+\index{size@{size}!LockFreeQueue$<$ T $>$@{LockFreeQueue$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{size()}{size()}}
+{\footnotesize\ttfamily \label{class_lock_free_queue_aa72a9fcaa535adbcd3b9daa88f3f35a9} 
+template$<$typename T$>$ \\
+size\+\_\+t \mbox{\hyperlink{class_lock_free_queue}{Lock\+Free\+Queue}}$<$ T $>$\+::size (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+

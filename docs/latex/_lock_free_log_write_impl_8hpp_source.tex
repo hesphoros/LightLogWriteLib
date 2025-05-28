@@ -1,0 +1,396 @@
+\doxysection{Lock\+Free\+Log\+Write\+Impl.\+hpp}
+\hypertarget{_lock_free_log_write_impl_8hpp_source}{}\label{_lock_free_log_write_impl_8hpp_source}\index{include/LockFreeLogWriteImpl.hpp@{include/LockFreeLogWriteImpl.hpp}}
+\mbox{\hyperlink{_lock_free_log_write_impl_8hpp}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ LOCK\_FREE\_LOG\_WRITE\_IMPL\_HPP}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ LOCK\_FREE\_LOG\_WRITE\_IMPL\_HPP}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <mutex>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <fstream>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <queue>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <condition\_variable>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <locale>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <codecvt>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <ostream>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <iomanip>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <filesystem>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{comment}{//\#include\ "{}iconv.h"{}}}
+\DoxyCodeLine{00025\ \textcolor{comment}{//\#pragma\ comment\ (\ lib,"{}libiconv.lib"{}\ )}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_light_log_write___info}{LightLogWrite\_Info}}\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_light_log_write___info_a606bdf5ee3989038f72fb512d8e46fa2}{sLogTagNameVal}};\ \ }
+\DoxyCodeLine{00040\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_light_log_write___info_aa6eab03fe23d2e9d3dcc2b15caeb609b}{sLogContentVal}};\ \ }
+\DoxyCodeLine{00041\ \};}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00054\ \textcolor{keyword}{enum\ class}\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{LogQueueOverflowStrategy}}\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{Block}},\ \ \ \ \ \ }
+\DoxyCodeLine{00056\ \ \ \ \ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}{DropOldest}}\ \ }
+\DoxyCodeLine{00057\ \};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00066\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::wstring\ Utf8ConvertsToUcs4(\textcolor{keyword}{const}\ std::string\&\ utf8str)\ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ std::wstring\_convert<std::codecvt\_utf8<wchar\_t>>\ converter;}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ converter.from\_bytes(utf8str);}
+\DoxyCodeLine{00071\ \ \ \ \ \}}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::range\_error\&\ e)\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Failed\ to\ convert\ UTF-\/8\ to\ UCS-\/4:\ "{}}\ +\ std::string(e.what()));}
+\DoxyCodeLine{00074\ \ \ \ \ \}}
+\DoxyCodeLine{00075\ \}}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::string\ Ucs4ConvertToUtf8(\textcolor{keyword}{const}\ std::wstring\&\ wstr)\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ std::wstring\_convert<std::codecvt\_utf8<wchar\_t>>\ converter;}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ converter.to\_bytes(wstr);}
+\DoxyCodeLine{00087\ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::range\_error\&\ e)\ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Failed\ to\ convert\ UCS-\/4\ to\ UTF-\/8:\ "{}}\ +\ std::string(e.what()));}
+\DoxyCodeLine{00090\ \ \ \ \ \}}
+\DoxyCodeLine{00091\ \}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00099\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::wstring\ U16StringToWString(\textcolor{keyword}{const}\ std::u16string\&\ u16str)\ \{}
+\DoxyCodeLine{00100\ \ \ \ \ std::wstring\ wstr;}
+\DoxyCodeLine{00101\ \textcolor{preprocessor}{\#ifdef\ \_WIN32}}
+\DoxyCodeLine{00102\ \ \ \ \ wstr.assign(u16str.begin(),\ u16str.end());}
+\DoxyCodeLine{00103\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00104\ \ \ \ \ std::wstring\_convert<}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ std::codecvt\_utf16<wchar\_t,\ 0x10ffff,\ std::little\_endian>>}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ converter;}
+\DoxyCodeLine{00107\ \ \ \ \ wstr\ =\ converter.from\_bytes(}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }\textcolor{keywordtype}{char}*\textcolor{keyword}{>}(u16str.data()),}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }\textcolor{keywordtype}{char}*\textcolor{keyword}{>}(u16str.data()\ +\ u16str.size()));}
+\DoxyCodeLine{00110\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordflow}{return}\ wstr;}
+\DoxyCodeLine{00112\ \}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00125\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00126\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_lock_free_queue_ad831e1419e0633c28aa266976e085d68}{LockFreeQueue}}\ \{}
+\DoxyCodeLine{00127\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keyword}{explicit}\ \mbox{\hyperlink{class_lock_free_queue_ad831e1419e0633c28aa266976e085d68}{LockFreeQueue}}(\textcolor{keywordtype}{size\_t}\ \mbox{\hyperlink{class_lock_free_queue_aa8203313789866b0cc7a22421d36076c}{capacity}})}
+\DoxyCodeLine{00129\ \ \ \ \ \{}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \_capacityMask\ =\ \mbox{\hyperlink{class_lock_free_queue_aa8203313789866b0cc7a22421d36076c}{capacity}}\ -\/\ 1;}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 1;\ i\ <=\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{void}*)\ *\ 4;\ i\ <<=\ 1)}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \ \ \ \ \_capacityMask\ |=\ \_capacityMask\ >>\ i;}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ \_capacity\ =\ \_capacityMask\ +\ 1;}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \_queue\ =\ (Node*)\textcolor{keyword}{new}\ \textcolor{keywordtype}{char}[\textcolor{keyword}{sizeof}(Node)\ *\ \_capacity];}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ \_capacity;\ ++i)}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \ \ \ \ \_queue[i].tail.store(i,\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \ \ \ \ \_queue[i].head.store(-\/1,\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \_tail.store(0,\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \_head.store(0,\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00144\ \ \ \ \ \}}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \ \ \ \ \mbox{\hyperlink{class_lock_free_queue_a990f9dbba984ee1ff71bd527daa8950d}{\string~LockFreeQueue}}()}
+\DoxyCodeLine{00147\ \ \ \ \ \{}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ \_head;\ i\ !=\ \_tail;\ ++i)}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \ \ \ \ (\&\_queue[i\ \&\ \_capacityMask].data)-\/>\string~T();}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \textcolor{keyword}{delete}[](\textcolor{keywordtype}{char}*)\_queue;}
+\DoxyCodeLine{00152\ \ \ \ \ \}}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ \mbox{\hyperlink{class_lock_free_queue_aa8203313789866b0cc7a22421d36076c}{capacity}}()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \_capacity;\ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ \mbox{\hyperlink{class_lock_free_queue_aa72a9fcaa535adbcd3b9daa88f3f35a9}{size}}()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00157\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ head\ =\ \_head.load(std::memory\_order\_acquire);}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_tail.load(std::memory\_order\_relaxed)\ -\/\ head;}
+\DoxyCodeLine{00160\ \ \ \ \ \}}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_lock_free_queue_a68a406c12d337a7b17f25b26e8742442}{push}}(\textcolor{keyword}{const}\ T\&\ data)}
+\DoxyCodeLine{00163\ \ \ \ \ \{}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ Node*\ node;}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ tail\ =\ \_tail.load(std::memory\_order\_relaxed);}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (;;)}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \ \ \ \ node\ =\ \&\_queue[tail\ \&\ \_capacityMask];}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (node-\/>tail.load(std::memory\_order\_relaxed)\ !=\ tail)}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((\_tail.compare\_exchange\_weak(tail,\ tail\ +\ 1,\ std::memory\_order\_relaxed)))}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \textcolor{keyword}{new}\ (\&node-\/>data)T(data);}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ node-\/>head.store(tail,\ std::memory\_order\_release);}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00177\ \ \ \ \ \}}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{class_lock_free_queue_ac163115f251d9a53f96cbe5f545e905c}{pop}}(T\&\ result)}
+\DoxyCodeLine{00180\ \ \ \ \ \{}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ Node*\ node;}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ head\ =\ \_head.load(std::memory\_order\_relaxed);}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (;;)}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ \ \ node\ =\ \&\_queue[head\ \&\ \_capacityMask];}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (node-\/>head.load(std::memory\_order\_relaxed)\ !=\ head)}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\_head.compare\_exchange\_weak(head,\ head\ +\ 1,\ std::memory\_order\_relaxed))}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ result\ =\ node-\/>data;}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ (\&node-\/>data)-\/>\string~T();}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ node-\/>tail.store(head\ +\ \_capacity,\ std::memory\_order\_release);}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00195\ \ \ \ \ \}}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keyword}{struct\ }Node}
+\DoxyCodeLine{00199\ \ \ \ \ \{}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ T\ data;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ std::atomic<size\_t>\ tail;}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ std::atomic<size\_t>\ head;}
+\DoxyCodeLine{00203\ \ \ \ \ \};}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \_capacityMask;}
+\DoxyCodeLine{00207\ \ \ \ \ Node*\ \_queue;}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \_capacity;}
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keywordtype}{char}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cacheLinePad1[64];}
+\DoxyCodeLine{00210\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \_tail;}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordtype}{char}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cacheLinePad2[64];}
+\DoxyCodeLine{00212\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \_head;}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keywordtype}{char}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cacheLinePad3[64];}
+\DoxyCodeLine{00214\ \};}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00222\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_lock_free_log_write_impl_a1f2ac20dcd8a19b790293319ff715ba1}{LockFreeLogWriteImpl}}\ \{}
+\DoxyCodeLine{00223\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00224\ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_a1f2ac20dcd8a19b790293319ff715ba1}{LockFreeLogWriteImpl}}(\textcolor{keywordtype}{size\_t}\ maxQueueSize\ =\ 500000,\ \mbox{\hyperlink{_lock_free_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{LogQueueOverflowStrategy}}\ strategy\ =\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{LogQueueOverflowStrategy::Block}},\ \textcolor{keywordtype}{size\_t}\ reportInterval\ =\ 100)}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ :\ kMaxQueueSize(maxQueueSize),}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ discardCount(0),}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ lastReportedDiscardCount(0),}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ bIsStopLogging\{\ false\ \},}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ bNeedReport\{\ false\ \},}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ queueFullStrategy(strategy),}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ reportInterval(reportInterval),}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ bHasLogLasting\{\ false\ \},}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ pLogWriteQueue(maxQueueSize)}
+\DoxyCodeLine{00234\ \ \ \ \ \{}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ sWrittenThreads\ =\ std::thread(\&LockFreeLogWriteImpl::RunWriteThread,\ \textcolor{keyword}{this});}
+\DoxyCodeLine{00236\ \ \ \ \ \}}
+\DoxyCodeLine{00237\ }
+\DoxyCodeLine{00238\ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_afead51b3592502691bf57dd10049a2f0}{\string~LockFreeLogWriteImpl}}()\ \{}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ CloseLogStream();}
+\DoxyCodeLine{00240\ \ \ \ \ \}}
+\DoxyCodeLine{00241\ }
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_aa6888169e7855671ea20a5c49284e4f9}{SetLogsFileName}}(\textcolor{keyword}{const}\ std::wstring\&\ sFilename)\ \{}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ std::lock\_guard<std::mutex>\ sWriteLock(fileMutex);}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pLogFileStream.is\_open())\ pLogFileStream.close();}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ ChecksDirectory(sFilename);}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ pLogFileStream.open(sFilename,\ std::ios::app);}
+\DoxyCodeLine{00247\ \ \ \ \ \}}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_ac20c0c1525020bda3c2a1b7705c6441a}{SetLogsFileName}}(\textcolor{keyword}{const}\ std::string\&\ sFilename)\ \{}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_aa6888169e7855671ea20a5c49284e4f9}{SetLogsFileName}}(Utf8ConvertsToUcs4(sFilename));}
+\DoxyCodeLine{00251\ \ \ \ \ \}}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a5cdf74a7b09341bc53c7b7e1f4f1c7d6}{SetLogsFileName}}(\textcolor{keyword}{const}\ std::u16string\&\ sFilename)\ \{}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_aa6888169e7855671ea20a5c49284e4f9}{SetLogsFileName}}(U16StringToWString(sFilename));}
+\DoxyCodeLine{00255\ \ \ \ \ \}}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_aa8ca09156414454dfca9410301884f35}{SetLastingsLogs}}(\textcolor{keyword}{const}\ std::wstring\&\ sFilePath,\ \textcolor{keyword}{const}\ std::wstring\&\ sBaseName)\ \{}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ sLogLastingDir\ =\ sFilePath;}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ sLogsBasedName\ =\ sBaseName;}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ bHasLogLasting\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ CreateLogsFile();}
+\DoxyCodeLine{00262\ \ \ \ \ \}}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a105911ddbc5dd86191f9d3cbd3ca3d82}{SetLastingsLogs}}(\textcolor{keyword}{const}\ std::u16string\&\ sFilePath,\ \textcolor{keyword}{const}\ std::u16string\&\ sBaseName)\ \{}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_aa8ca09156414454dfca9410301884f35}{SetLastingsLogs}}(U16StringToWString(sFilePath),\ U16StringToWString(sBaseName));}
+\DoxyCodeLine{00266\ \ \ \ \ \}}
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a466a7dd697a892c6b2a8659be98d69d9}{SetLastingsLogs}}(\textcolor{keyword}{const}\ std::string\&\ sFilePath,\ \textcolor{keyword}{const}\ std::string\&\ sBaseName)\ \{}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_aa8ca09156414454dfca9410301884f35}{SetLastingsLogs}}(Utf8ConvertsToUcs4(sFilePath),\ Utf8ConvertsToUcs4(sBaseName));}
+\DoxyCodeLine{00269\ \ \ \ \ \}}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a1010a730dbabe4e8a39e84f72b988e2b}{WriteLogContent}}(\textcolor{keyword}{const}\ std::wstring\&\ sTypeVal,\ \textcolor{keyword}{const}\ std::wstring\&\ sMessage)\ \{}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ bNeedReport\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ currentDiscard\ =\ 0;}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{thread\_local}\ \textcolor{keywordtype}{bool}\ inErrorReport\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (queueFullStrategy\ ==\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{LogQueueOverflowStrategy::Block}})\ \{}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 阻塞直到成功写入}}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!pLogWriteQueue.push(\{\ sTypeVal,\ sMessage\ \}))\ \{}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bIsStopLogging)\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::this\_thread::yield();}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (queueFullStrategy\ ==\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}{LogQueueOverflowStrategy::DropOldest}})\ \{}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!pLogWriteQueue.push(\{\ sTypeVal,\ sMessage\ \}))\ \{}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 队列满，丢弃最老的再插入}}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_light_log_write___info}{LightLogWrite\_Info}}\ dummy;}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogWriteQueue.pop(dummy);}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogWriteQueue.push(\{\ sTypeVal,\ sMessage\ \});}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++discardCount;}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (discardCount\ -\/\ lastReportedDiscardCount\ >=\ reportInterval)\ \{}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bNeedReport\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ currentDiscard\ =\ discardCount;}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lastReportedDiscardCount.store(discardCount.load());}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ pWrittenCondVar.notify\_one();}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bNeedReport\ \&\&\ !inErrorReport)\ \{}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \ \ \ \ inErrorReport\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \ \ \ \ std::wstring\ overflowMsg\ =\ L\textcolor{stringliteral}{"{}The\ log\ queue\ overflows\ and\ has\ been\ discarded\ "{}}}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +\ std::to\_wstring(currentDiscard)\ +\ L\textcolor{stringliteral}{"{}\ logs"{}};}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//std::wcerr\ <<\ L"{}[WriteLogContent]\ Report\ overflow:\ "{}\ <<\ overflowMsg\ <<\ std::endl;}}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_a1010a730dbabe4e8a39e84f72b988e2b}{WriteLogContent}}(L\textcolor{stringliteral}{"{}LOG\_OVERFLOW"{}},\ overflowMsg);}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \ \ \ \ inErrorReport\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00307\ \ \ \ \ \}}
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00309\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a6a1848b8c06cca96bd0e3ce0af63c12a}{WriteLogContent}}(\textcolor{keyword}{const}\ std::string\&\ sTypeVal,\ \textcolor{keyword}{const}\ std::string\&\ sMessage)\ \{}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_a1010a730dbabe4e8a39e84f72b988e2b}{WriteLogContent}}(Utf8ConvertsToUcs4(sTypeVal),\ Utf8ConvertsToUcs4(sMessage));}
+\DoxyCodeLine{00311\ \ \ \ \ \}}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00313\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a935ddb9bc2a6b736f0d7b2a7f99595ad}{WriteLogContent}}(\textcolor{keyword}{const}\ std::u16string\&\ sTypeVal,\ \textcolor{keyword}{const}\ std::u16string\&\ sMessage)\ \{}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_a1010a730dbabe4e8a39e84f72b988e2b}{WriteLogContent}}(U16StringToWString(sTypeVal),\ U16StringToWString(sMessage));}
+\DoxyCodeLine{00315\ \ \ \ \ \}}
+\DoxyCodeLine{00316\ }
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a40d6cfea58d541beeb3eae6bbc2bdc27}{GetDiscardCount}}()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ discardCount;}
+\DoxyCodeLine{00319\ \ \ \ \ \}}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_lock_free_log_write_impl_a542641f526b97f2a49aea5e8a76e7220}{ResetDiscardCount}}()\ \{}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ discardCount\ =\ 0;}
+\DoxyCodeLine{00323\ \ \ \ \ \}}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00325\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00326\ \ \ \ \ std::wstring\ BuildLogFileOut()\ \{}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ std::tm\ sTmPartsInfo\ =\ GetCurrsTimerTm();}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ std::wostringstream\ sWosStrStream;}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ sWosStrStream\ <<\ std::put\_time(\&sTmPartsInfo,\ L\textcolor{stringliteral}{"{}\%Y\_\%m\_\%d"{}})\ <<\ (sTmPartsInfo.tm\_hour\ >=\ 12\ ?\ L\textcolor{stringliteral}{"{}\_AM"{}}\ :\ L\textcolor{stringliteral}{"{}\_PM"{}})\ <<\ L\textcolor{stringliteral}{"{}.log"{}};}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ bLastingTmTags\ =\ (sTmPartsInfo.tm\_hour\ >\ 12);}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ std::filesystem::path\ sLotOutPaths\ =\ sLogLastingDir;}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ std::filesystem::path\ sLogOutFiles\ =\ sLotOutPaths\ /\ (sLogsBasedName\ +\ sWosStrStream.str());}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sLogOutFiles.wstring();}
+\DoxyCodeLine{00334\ \ \ \ \ \}}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{keywordtype}{void}\ CloseLogStream()\ \{}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ bIsStopLogging\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ pWrittenCondVar.notify\_all();}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_lock_free_log_write_impl_a1010a730dbabe4e8a39e84f72b988e2b}{WriteLogContent}}(L\textcolor{stringliteral}{"{}<================================\ \ \ \ \ \ \ \ \ \ \ \ \ \ Stop\ log\ write\ thread\ \ \ \ "{}},\ L\textcolor{stringliteral}{"{}================================>"{}});}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sWrittenThreads.joinable())\ sWrittenThreads.join();}
+\DoxyCodeLine{00341\ \ \ \ \ \}}
+\DoxyCodeLine{00342\ }
+\DoxyCodeLine{00343\ \ \ \ \ \textcolor{keywordtype}{void}\ CreateLogsFile()\ \{}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ std::wstring\ sOutFileName\ =\ BuildLogFileOut();}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ std::lock\_guard<std::mutex>\ sLock(fileMutex);}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ ChecksDirectory(sOutFileName);}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ pLogFileStream.close();}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ pLogFileStream.open(sOutFileName,\ std::ios::app);}
+\DoxyCodeLine{00349\ \ \ \ \ \}}
+\DoxyCodeLine{00350\ }
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{keywordtype}{void}\ RunWriteThread()\ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 检查是否需要切换日志文件（AM/PM切换）}}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bHasLogLasting)\ \{}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ isCurrentPM\ =\ (GetCurrsTimerTm().tm\_hour\ >\ 12);}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bLastingTmTags\ !=\ isCurrentPM)\ \{}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CreateLogsFile();}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ \ \ \ \ LightLogWrite\_Info\ sLogMessageInf;}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ hasLog\ =\ pLogWriteQueue.pop(sLogMessageInf);}
+\DoxyCodeLine{00363\ }
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 只有在停止标志为真且队列为空时才退出}}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bIsStopLogging\ \&\&\ pLogWriteQueue.size()\ ==\ 0\ \&\&\ !hasLog)\ \{}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 写入日志内容到文件}}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (hasLog\ \&\&\ !sLogMessageInf.\mbox{\hyperlink{struct_light_log_write___info_aa6eab03fe23d2e9d3dcc2b15caeb609b}{sLogContentVal}}.empty()\ \&\&\ pLogFileStream.is\_open())\ \{}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogFileStream\ <<\ sLogMessageInf.\mbox{\hyperlink{struct_light_log_write___info_a606bdf5ee3989038f72fb512d8e46fa2}{sLogTagNameVal}}}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ L\textcolor{stringliteral}{"{}-\///>>>"{}}\ <<\ GetCurrentTimer()}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ L\textcolor{stringliteral}{"{}\ :\ "{}}\ <<\ sLogMessageInf.\mbox{\hyperlink{struct_light_log_write___info_aa6eab03fe23d2e9d3dcc2b15caeb609b}{sLogContentVal}}\ <<\ L\textcolor{stringliteral}{"{}\(\backslash\)n"{}};}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (!hasLog)\ \{}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 队列为空，避免忙等}}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::this\_thread::sleep\_for(std::chrono::milliseconds(10));}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ 关闭日志文件流}}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ pLogFileStream.close();}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}Log\ write\ thread\ Exit\(\backslash\)n"{}};}
+\DoxyCodeLine{00384\ \ \ \ \ \}}
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ }
+\DoxyCodeLine{00388\ \ \ \ \ \textcolor{keywordtype}{void}\ ChecksDirectory(\textcolor{keyword}{const}\ std::wstring\&\ sFilename)\ \{}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ std::filesystem::path\ sFullFileName(sFilename);}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ std::filesystem::path\ sOutFilesPath\ =\ sFullFileName.parent\_path();}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!sOutFilesPath.empty()\ \&\&\ !std::filesystem::exists(sOutFilesPath))}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \ \ \ \ std::filesystem::create\_directories(sOutFilesPath);}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00395\ \ \ \ \ \}}
+\DoxyCodeLine{00396\ }
+\DoxyCodeLine{00397\ \ \ \ \ std::wstring\ GetCurrentTimer()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ std::tm\ sTmPartsInfo\ =\ GetCurrsTimerTm();}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ std::wostringstream\ sWosStrStream;}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ sWosStrStream\ <<\ std::put\_time(\&sTmPartsInfo,\ L\textcolor{stringliteral}{"{}\%Y-\/\%m-\/\%d\ \%H:\%M:\%S"{}});}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sWosStrStream.str();}
+\DoxyCodeLine{00402\ \ \ \ \ \}}
+\DoxyCodeLine{00403\ }
+\DoxyCodeLine{00404\ \ \ \ \ std::tm\ GetCurrsTimerTm()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ sCurrentTime\ =\ std::chrono::system\_clock::now();}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ std::time\_t\ sCurrTimerTm\ =\ std::chrono::system\_clock::to\_time\_t(sCurrentTime);}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ std::tm\ sCurrTmDatas;}
+\DoxyCodeLine{00408\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \#ifdef\ \_WIN32}}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ localtime\_s(\&sCurrTmDatas,\ \&sCurrTimerTm);}
+\DoxyCodeLine{00410\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \#else}}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ localtime\_r(\&sCurrTimerTm,\ \&sCurrTmDatas);}
+\DoxyCodeLine{00412\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \#endif}}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sCurrTmDatas;}
+\DoxyCodeLine{00414\ \ \ \ \ \}}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00416\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00417\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00418\ \ \ \ \ \textcolor{comment}{//\ Section\ Name:\ Private\ Members\ @\{}}
+\DoxyCodeLine{00419\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00420\ \ \ \ \ std::wofstream\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogFileStream;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00421\ \ \ \ \ std::mutex\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fileMutex;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00422\ \ \ \ \ LockFreeQueue<LightLogWrite\_Info>\ \ \ \ \ pLogWriteQueue;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00423\ \ \ \ \ std::condition\_variable\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pWrittenCondVar;\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00424\ \ \ \ \ std::thread\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sWrittenThreads;\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00425\ \ \ \ \ std::atomic<bool>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bIsStopLogging;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00426\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sLogLastingDir;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00427\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sLogsBasedName;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00428\ \ \ \ \ std::atomic<bool>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bHasLogLasting;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00429\ \ \ \ \ std::atomic<bool>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bLastingTmTags;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ kMaxQueueSize;\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00431\ \ \ \ \ \mbox{\hyperlink{_lock_free_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{LogQueueOverflowStrategy}}\ \ \ \ \ \ \ \ \ \ \ \ \ \ queueFullStrategy;\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00432\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ discardCount;\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00433\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lastReportedDiscardCount;\ \ }
+\DoxyCodeLine{00434\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ reportInterval;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00435\ \ \ \ \ std::atomic<bool>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bNeedReport;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00436\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00437\ \ \ \ \ \textcolor{comment}{//\ Section\ Name:\ Private\ Members\ @\}}}
+\DoxyCodeLine{00438\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00439\ \};}
+\DoxyCodeLine{00440\ }
+\DoxyCodeLine{00441\ }
+\DoxyCodeLine{00442\ }
+\DoxyCodeLine{00443\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ \ !LOCK\_FREE\_LOG\_WRITE\_IMPL\_HPP}}
+
+\end{DoxyCode}

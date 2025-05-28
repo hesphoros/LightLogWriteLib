@@ -1,0 +1,327 @@
+\doxysection{Light\+Log\+Write\+Impl.\+hpp}
+\hypertarget{_light_log_write_impl_8hpp_source}{}\label{_light_log_write_impl_8hpp_source}\index{include/LightLogWriteImpl.hpp@{include/LightLogWriteImpl.hpp}}
+\mbox{\hyperlink{_light_log_write_impl_8hpp}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ INCLUDE\_LIGHTLOGWRITEIMPL\_HPP\_}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ INCLUDE\_LIGHTLOGWRITEIMPL\_HPP\_}}
+\DoxyCodeLine{00003\ \textcolor{comment}{/*****************************************************************************}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ \ LightLogWriteImpl}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ *\ \ Copyright\ (C)\ 2025\ hesphoros\ <hesphoros@gmail.com>}}
+\DoxyCodeLine{00006\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00007\ \textcolor{comment}{\ *\ \ This\ file\ is\ part\ of\ LightLogWriteImpl.}}
+\DoxyCodeLine{00008\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00009\ \textcolor{comment}{\ *\ \ This\ program\ is\ free\ software;\ you\ can\ redistribute\ it\ d:\(\backslash\)codespace\(\backslash\)LightLogWriteImpl\(\backslash\)include\(\backslash\)LightLogWriteImpl.hppand/or\ modify}}
+\DoxyCodeLine{00010\ \textcolor{comment}{\ *\ \ it\ under\ the\ terms\ of\ the\ GNU\ General\ Public\ License\ version\ 3\ as}}
+\DoxyCodeLine{00011\ \textcolor{comment}{\ *\ \ published\ by\ the\ Free\ Software\ Foundation.}}
+\DoxyCodeLine{00012\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00013\ \textcolor{comment}{\ *\ \ You\ should\ have\ received\ a\ copy\ of\ the\ GNU\ General\ Public\ License}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ *\ \ along\ with\ this\ program.\ If\ not,\ see\ <http://www.gnu.org/licenses/>.}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ *\ \ @file\ \ \ \ \ LightLogWriteImpl.hpp}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ *\ \ @brief\ \ \ \ 有锁实现的轻量级的日志库}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ *\ \ @details\ \ 详细描述}}
+\DoxyCodeLine{00019\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00020\ \textcolor{comment}{\ *\ \ @author\ \ \ hesphoros}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *\ \ @email\ \ \ \ hesphoros@gmail.com}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ *\ \ @version\ \ 1.0.0.1}}
+\DoxyCodeLine{00023\ \textcolor{comment}{\ *\ \ @date\ \ \ \ \ 2025/05/27}}
+\DoxyCodeLine{00024\ \textcolor{comment}{\ *\ \ @license\ \ GNU\ General\ Public\ License\ (GPL)}}
+\DoxyCodeLine{00025\ \textcolor{comment}{\ *-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/*}}
+\DoxyCodeLine{00026\ \textcolor{comment}{\ *\ \ Remark\ \ \ \ \ \ \ \ \ :\ None}}
+\DoxyCodeLine{00027\ \textcolor{comment}{\ *-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/*}}
+\DoxyCodeLine{00028\ \textcolor{comment}{\ *\ \ Change\ History\ :}}
+\DoxyCodeLine{00029\ \textcolor{comment}{\ *\ \ <Date>\ \ \ \ \ |\ <Version>\ |\ <Author>\ \ \ \ \ \ \ |\ <Description>}}
+\DoxyCodeLine{00030\ \textcolor{comment}{\ *\ \ 2025/03/27\ |\ 1.0.0.1\ \ \ |\ hesphoros\ \ \ \ \ \ |\ Create\ file}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *****************************************************************************/}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#ifdef\ \_MSC\_VER}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#pragma\ execution\_character\_set("{}utf-\/8"{})}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#include\ <fstream>}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ <iomanip>}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#include\ <queue>}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#include\ <mutex>}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#include\ <condition\_variable>}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#include\ <filesystem>}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#include\ <locale>}}
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#include\ <codecvt>}}
+\DoxyCodeLine{00053\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{comment}{//\ TODO:\ use\ iconv\ for\ character\ encoding\ conversion\ \#include\ <iconv.h>\ //\ Uncomment\ if\ you\ want}}
+\DoxyCodeLine{00066\ \textcolor{comment}{//\ to\ use\ iconv\ for\ character\ encoding\ conversion\ \#pragma\ comment(lib,\ "{}libiconv.lib"{})}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00077\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_light_log_write_info}{LightLogWriteInfo}}\ \{}
+\DoxyCodeLine{00078\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_light_log_write_info_ac1f18363a301eec5a1e4cf87e649f5b8}{sLogTagNameVal}};\ \ }
+\DoxyCodeLine{00079\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{struct_light_log_write_info_ad69125a8a023e8aec477ed2936739a77}{sLogContentVal}};\ \ }
+\DoxyCodeLine{00080\ \};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00093\ \textcolor{keyword}{enum\ class}\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{LogQueueOverflowStrategy}}\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{Block}},\ \ \ \ \ \ }
+\DoxyCodeLine{00095\ \ \ \ \ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}{DropOldest}}\ \ }
+\DoxyCodeLine{00096\ \};}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00104\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::wstring\ Utf8ConvertsToUcs4(\textcolor{keyword}{const}\ std::string\&\ utf8str)\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ std::wstring\_convert<std::codecvt\_utf8<wchar\_t>>\ converter;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ converter.from\_bytes(utf8str);}
+\DoxyCodeLine{00108\ \ \ \ \ \}}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::range\_error\&\ e)\ \{}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Failed\ to\ convert\ UTF-\/8\ to\ UCS-\/4:\ "{}}\ +\ std::string(e.what()));}
+\DoxyCodeLine{00111\ \ \ \ \ \}}
+\DoxyCodeLine{00112\ \}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00120\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::string\ Ucs4ConvertToUtf8(\textcolor{keyword}{const}\ std::wstring\&\ wstr)\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ std::wstring\_convert<std::codecvt\_utf8<wchar\_t>>\ converter;}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ converter.to\_bytes(wstr);}
+\DoxyCodeLine{00124\ \ \ \ \ \}}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::range\_error\&\ e)\ \{}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Failed\ to\ convert\ UCS-\/4\ to\ UTF-\/8:\ "{}}\ +\ std::string(e.what()));}
+\DoxyCodeLine{00127\ \ \ \ \ \}}
+\DoxyCodeLine{00128\ \}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00136\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::wstring\ U16StringToWString(\textcolor{keyword}{const}\ std::u16string\&\ u16str)\ \{}
+\DoxyCodeLine{00137\ \ \ \ \ std::wstring\ wstr;}
+\DoxyCodeLine{00138\ \textcolor{preprocessor}{\ \ \ \ \#ifdef\ \_WIN32}}
+\DoxyCodeLine{00139\ \ \ \ \ wstr.assign(u16str.begin(),\ u16str.end());}
+\DoxyCodeLine{00140\ \textcolor{preprocessor}{\ \ \ \ \#else}}
+\DoxyCodeLine{00141\ \ \ \ \ std::wstring\_convert<std::codecvt\_utf16<wchar\_t,\ 0x10ffff,\ std::little\_endian>>converter;}
+\DoxyCodeLine{00142\ \ \ \ \ wstr\ =\ converter.from\_bytes(}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }\textcolor{keywordtype}{char}*\textcolor{keyword}{>}(u16str.data()),}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }\textcolor{keywordtype}{char}*\textcolor{keyword}{>}(u16str.data()\ +\ u16str.size()));}
+\DoxyCodeLine{00145\ \textcolor{preprocessor}{\ \ \ \ \#endif}}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keywordflow}{return}\ wstr;}
+\DoxyCodeLine{00147\ \}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00153\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_light_log_write___impl_a95a646eb4730381ed11546b2e17c051b}{LightLogWrite\_Impl}}\ \{}
+\DoxyCodeLine{00154\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00166\ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a95a646eb4730381ed11546b2e17c051b}{LightLogWrite\_Impl}}(\textcolor{keywordtype}{size\_t}\ maxQueueSize\ =\ 500000,\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{LogQueueOverflowStrategy}}\ strategy\ =\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{LogQueueOverflowStrategy::Block}},\ \textcolor{keywordtype}{size\_t}\ reportInterval\ =\ 100)}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ :\ kMaxQueueSize(maxQueueSize),}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ discardCount(0),}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ lastReportedDiscardCount(0),}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ bIsStopLogging\{\ false\ \},}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ queueFullStrategy(strategy),}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ reportInterval(reportInterval),}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ bHasLogLasting\{\ false\ \}\ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ sWrittenThreads\ =\ std::thread(\&LightLogWrite\_Impl::RunWriteThread,\ \textcolor{keyword}{this});}
+\DoxyCodeLine{00175\ \ \ \ \ \}}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00183\ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a84db3483eda51e6f439193ac99dbc842}{\string~LightLogWrite\_Impl}}()\ \{}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ CloseLogStream();}
+\DoxyCodeLine{00185\ \ \ \ \ \}}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_ad1c8eb28c6d9aa1af77f540b7c855917}{SetLogsFileName}}(\textcolor{keyword}{const}\ std::wstring\&\ sFilename)\ \{}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ std::lock\_guard<std::mutex>\ sWriteLock(pLogWriteMutex);}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pLogFileStream.is\_open())}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \ \ \ \ pLogFileStream.close();}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ ChecksDirectory(sFilename);\ \textcolor{comment}{//\ \ 确保目录存在}}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ pLogFileStream.open(sFilename,\ std::ios::app);}
+\DoxyCodeLine{00199\ \ \ \ \ \}}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_a5c2f5a970ffcbe9731dfdf97976d3e5a}{SetLogsFileName}}(\textcolor{keyword}{const}\ std::string\&\ sFilename)\ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_ad1c8eb28c6d9aa1af77f540b7c855917}{SetLogsFileName}}(Utf8ConvertsToUcs4(sFilename));}
+\DoxyCodeLine{00209\ \ \ \ \ \}}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_ab62c4420c4c8180d9b6d3151b1785d8f}{SetLogsFileName}}(\textcolor{keyword}{const}\ std::u16string\&\ sFilename)\ \{}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_ad1c8eb28c6d9aa1af77f540b7c855917}{SetLogsFileName}}(U16StringToWString(sFilename));}
+\DoxyCodeLine{00213\ \ \ \ \ \}}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_a50eb334550138ff18989612a23f35798}{SetLastingsLogs}}(\textcolor{keyword}{const}\ std::wstring\&\ sFilePath,\ \textcolor{keyword}{const}\ std::wstring\&\ sBaseName)\ \{}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ sLogLastingDir\ =\ sFilePath;}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ sLogsBasedName\ =\ sBaseName;}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ bHasLogLasting\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ CreateLogsFile();}
+\DoxyCodeLine{00230\ \ \ \ \ \}}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_a3ff8b3accce1246594a7d49c77481d36}{SetLastingsLogs}}(\textcolor{keyword}{const}\ std::u16string\&\ sFilePath,\ \textcolor{keyword}{const}\ std::u16string\&\ sBaseName)\ \{}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a50eb334550138ff18989612a23f35798}{SetLastingsLogs}}(U16StringToWString(sFilePath),\ U16StringToWString(sBaseName));}
+\DoxyCodeLine{00234\ \ \ \ \ \}}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_a0a4eb862ad5a0adb6bc3a8d586ae21c1}{SetLastingsLogs}}(\textcolor{keyword}{const}\ std::string\&\ sFilePath,\ \textcolor{keyword}{const}\ std::string\&\ sBaseName)\ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a50eb334550138ff18989612a23f35798}{SetLastingsLogs}}(Utf8ConvertsToUcs4(sFilePath),\ Utf8ConvertsToUcs4(sBaseName));}
+\DoxyCodeLine{00237\ \ \ \ \ \}}
+\DoxyCodeLine{00238\ }
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_a78a9cc299bb69aff33cab42d172a2841}{WriteLogContent}}(\textcolor{keyword}{const}\ std::wstring\&\ sTypeVal,\ \textcolor{keyword}{const}\ std::wstring\&\ sMessage)\ \{}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ bNeedReport\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ currentDiscard\ =\ 0;}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{thread\_local}\ \textcolor{keywordtype}{bool}\ inErrorReport\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (queueFullStrategy\ ==\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae1e4c8c9ccd9fc39c391da4bcd093fb2}{LogQueueOverflowStrategy::Block}})\ \{}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \ \ \ \ std::unique\_lock<std::mutex>\ sWriteLock(pLogWriteMutex);}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ std::wcerr\ <<\ L"{}[WriteLogContent]\ Try\ push\ (Block),\ queue\ size:\ "{}\ <<}}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ pLogWriteQueue.size()\ <<\ std::endl;}}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \ \ \ \ pWrittenCondVar.wait(sWriteLock,\ [\textcolor{keyword}{this}]\ \{\ \textcolor{keywordflow}{return}\ pLogWriteQueue.size()\ <\ kMaxQueueSize;\ \});}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ pLogWriteQueue.push(\{\ sTypeVal,\ sMessage\ \});}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ std::wcerr\ <<\ L"{}[WriteLogContent]\ Pushed\ (Block),\ queue\ size:\ "{}\ <<}}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ pLogWriteQueue.size()\ <<\ std::endl;}}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (queueFullStrategy\ ==\ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30ae273dab723fc345684a50d971853ccbd}{LogQueueOverflowStrategy::DropOldest}})\ \{}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ \ std::lock\_guard<std::mutex>\ sWriteLock(pLogWriteMutex);}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ std::wcerr\ <<\ L"{}[WriteLogContent]\ Try\ push\ (DropOldest),\ queue\ size:\ "{}\ <<}}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ pLogWriteQueue.size()\ <<\ std::endl;}}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pLogWriteQueue.size()\ >=\ kMaxQueueSize)\ \{}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ std::wcerr\ <<\ L"{}[WriteLogContent]\ Drop\ oldest,\ queue\ full:\ "{}\ <<}}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ pLogWriteQueue.size()\ <<\ std::endl;}}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogWriteQueue.pop();}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++discardCount;}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (discardCount\ -\/\ lastReportedDiscardCount\ >=\ reportInterval)\ \{}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bNeedReport\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ currentDiscard\ =\ discardCount;}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ lastReportedDiscardCount.store(discardCount.load());}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ pLogWriteQueue.push(\{\ sTypeVal,\ sMessage\ \});}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ std::wcout\ <<\ L"{}[WriteLogContent]\ Pushed\ (DropOldest),\ queue\ size:\ "{}\ <<}}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ pLogWriteQueue.size()\ <<\ std::endl;}}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ pWrittenCondVar.notify\_one();}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bNeedReport\ \&\&\ !inErrorReport)\ \{}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ inErrorReport\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \ \ \ \ std::wstring\ overflowMsg\ =\ L\textcolor{stringliteral}{"{}The\ log\ queue\ overflows\ and\ has\ been\ discarded\ "{}}\ +\ std::to\_wstring(currentDiscard)\ +\ L\textcolor{stringliteral}{"{}\ logs"{}};}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ std::wcerr\ <<\ L"{}[WriteLogContent]\ Report\ overflow:\ "{}\ <<\ overflowMsg\ <<\ std::endl;}}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a78a9cc299bb69aff33cab42d172a2841}{WriteLogContent}}(L\textcolor{stringliteral}{"{}LOG\_OVERFLOW"{}},\ overflowMsg);}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ inErrorReport\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00287\ \ \ \ \ \}}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_a79cf08fb3d3d31b815e839882e3e472c}{WriteLogContent}}(\textcolor{keyword}{const}\ std::string\&\ sTypeVal,\ \textcolor{keyword}{const}\ std::string\&\ sMessage)\ \{}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a78a9cc299bb69aff33cab42d172a2841}{WriteLogContent}}(Utf8ConvertsToUcs4(sTypeVal),\ Utf8ConvertsToUcs4(sMessage));}
+\DoxyCodeLine{00291\ \ \ \ \ \}}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_a6793412c489d963072d3deeb398b2246}{WriteLogContent}}(\textcolor{keyword}{const}\ std::u16string\&\ sTypeVal,\ \textcolor{keyword}{const}\ std::u16string\&\ sMessage)\ \{}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a78a9cc299bb69aff33cab42d172a2841}{WriteLogContent}}(U16StringToWString(sTypeVal),\ U16StringToWString(sMessage));}
+\DoxyCodeLine{00295\ \ \ \ \ \}}
+\DoxyCodeLine{00296\ }
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ \mbox{\hyperlink{class_light_log_write___impl_ac50589acb51e0a8a4848fe2ec59ff0ba}{GetDiscardCount}}()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ discardCount;}
+\DoxyCodeLine{00305\ \ \ \ \ \}}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00313\ \ \ \ \ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{class_light_log_write___impl_ab5cec22f698ac3047115a55e705b6c9b}{ResetDiscardCount}}()\ \{}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ discardCount\ =\ 0;}
+\DoxyCodeLine{00315\ \ \ \ \ \}}
+\DoxyCodeLine{00316\ }
+\DoxyCodeLine{00317\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00324\ \ \ \ \ std::wstring\ BuildLogFileOut()\ \{}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ std::tm\ sTmPartsInfo\ =\ GetCurrsTimerTm();}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ std::wostringstream\ sWosStrStream;}
+\DoxyCodeLine{00327\ }
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ sWosStrStream\ <<\ std::put\_time(\&sTmPartsInfo,\ L\textcolor{stringliteral}{"{}\%Y\_\%m\_\%d"{}})\ <<\ (sTmPartsInfo.tm\_hour\ >=\ 12\ ?\ L\textcolor{stringliteral}{"{}\_AM"{}}\ :\ L\textcolor{stringliteral}{"{}\_PM"{}})\ <<\ L\textcolor{stringliteral}{"{}.log"{}};}
+\DoxyCodeLine{00329\ }
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ bLastingTmTags\ =\ (sTmPartsInfo.tm\_hour\ >\ 12);}
+\DoxyCodeLine{00331\ }
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ std::filesystem::path\ sLotOutPaths\ =\ sLogLastingDir;}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ std::filesystem::path\ sLogOutFiles\ =\ sLotOutPaths\ /\ (sLogsBasedName\ +\ sWosStrStream.str());}
+\DoxyCodeLine{00334\ }
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sLogOutFiles.wstring();}
+\DoxyCodeLine{00336\ \ \ \ \ \}}
+\DoxyCodeLine{00337\ }
+\DoxyCodeLine{00345\ \ \ \ \ \textcolor{keywordtype}{void}\ CloseLogStream()\ \{}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ bIsStopLogging\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ pWrittenCondVar.notify\_all();}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \mbox{\hyperlink{class_light_log_write___impl_a78a9cc299bb69aff33cab42d172a2841}{WriteLogContent}}(L\textcolor{stringliteral}{"{}<================================\ \ \ \ \ \ \ \ \ \ \ \ \ \ Stop\ log\ write\ thread\ \ \ \ "{}},\ L\textcolor{stringliteral}{"{}================================>"{}});}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sWrittenThreads.joinable())}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \ \ \ \ sWrittenThreads.join();\ \textcolor{comment}{//\ 等待线程结束}}
+\DoxyCodeLine{00351\ \ \ \ \ \}}
+\DoxyCodeLine{00352\ }
+\DoxyCodeLine{00359\ \ \ \ \ \textcolor{keywordtype}{void}\ CreateLogsFile()\ \{}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ std::wstring\ sOutFileName\ =\ BuildLogFileOut();}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ std::lock\_guard<std::mutex>\ sLock(pLogWriteMutex);}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ ChecksDirectory(sOutFileName);}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ pLogFileStream.close();\ \textcolor{comment}{//\ 关闭之前提交的文件流}}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ pLogFileStream.open(sOutFileName,\ std::ios::app);}
+\DoxyCodeLine{00365\ \ \ \ \ \}}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00375\ \ \ \ \ \textcolor{keywordtype}{void}\ RunWriteThread()\ \{}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bHasLogLasting)}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bLastingTmTags\ !=\ (GetCurrsTimerTm().tm\_hour\ >\ 12))}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CreateLogsFile();}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \ \ \ \ LightLogWriteInfo\ sLogMessageInf;}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ sLock\ =\ std::unique\_lock<std::mutex>(pLogWriteMutex);}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pWrittenCondVar.wait(sLock,\ [\textcolor{keyword}{this}]}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ !pLogWriteQueue.empty()\ ||\ bIsStopLogging;\ \});}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bIsStopLogging\ \&\&\ pLogWriteQueue.empty())}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};\ \textcolor{comment}{//\ 如果停止标志为真且队列为空，则退出线程}}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!pLogWriteQueue.empty())\ \{}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sLogMessageInf\ =\ pLogWriteQueue.front();}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogWriteQueue.pop();}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pWrittenCondVar.notify\_one();}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!sLogMessageInf.\mbox{\hyperlink{struct_light_log_write_info_ad69125a8a023e8aec477ed2936739a77}{sLogContentVal}}.empty()\ \&\&\ pLogFileStream.is\_open())\ \{}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogFileStream\ <<\ sLogMessageInf.\mbox{\hyperlink{struct_light_log_write_info_ac1f18363a301eec5a1e4cf87e649f5b8}{sLogTagNameVal}}\ <<\ L\textcolor{stringliteral}{"{}-\///>>>"{}}\ <<\ GetCurrentTimer()\ <<\ \textcolor{stringliteral}{"{}\ :\ "{}}\ <<\ sLogMessageInf.\mbox{\hyperlink{struct_light_log_write_info_ad69125a8a023e8aec477ed2936739a77}{sLogContentVal}}\ <<\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}};}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ pLogFileStream.close();}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ std::cerr\ <<\ \textcolor{stringliteral}{"{}Log\ write\ thread\ Exit\(\backslash\)n"{}};}
+\DoxyCodeLine{00401\ \ \ \ \ \}}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00409\ \ \ \ \ \textcolor{keywordtype}{void}\ ChecksDirectory(\textcolor{keyword}{const}\ std::wstring\&\ sFilename)\ \{}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ std::filesystem::path\ sFullFileName(sFilename);}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ std::filesystem::path\ sOutFilesPath\ =\ sFullFileName.parent\_path();}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!sOutFilesPath.empty()\ \&\&\ !std::filesystem::exists(sOutFilesPath))}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \ \ \ \ std::filesystem::create\_directories(sOutFilesPath);}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00416\ \ \ \ \ \}}
+\DoxyCodeLine{00423\ \ \ \ \ std::wstring\ GetCurrentTimer()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00424\ \ \ \ \ \ \ \ \ std::tm\ sTmPartsInfo\ =\ GetCurrsTimerTm();}
+\DoxyCodeLine{00425\ \ \ \ \ \ \ \ \ std::wostringstream\ sWosStrStream;}
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ sWosStrStream\ <<\ std::put\_time(\&sTmPartsInfo,\ L\textcolor{stringliteral}{"{}\%Y-\/\%m-\/\%d\ \%H:\%M:\%S"{}});}
+\DoxyCodeLine{00427\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sWosStrStream.str();}
+\DoxyCodeLine{00428\ \ \ \ \ \}}
+\DoxyCodeLine{00429\ }
+\DoxyCodeLine{00440\ \ \ \ \ std::tm\ GetCurrsTimerTm()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ sCurrentTime\ =\ std::chrono::system\_clock::now();}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ std::time\_t\ sCurrTimerTm\ =\ std::chrono::system\_clock::to\_time\_t(sCurrentTime);}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ std::tm\ sCurrTmDatas;}
+\DoxyCodeLine{00444\ \textcolor{preprocessor}{\ \ \ \ \#ifdef\ \_WIN32}}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ localtime\_s(\&sCurrTmDatas,\ \&sCurrTimerTm);}
+\DoxyCodeLine{00446\ \textcolor{preprocessor}{\ \ \ \ \#else}}
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ localtime\_r(\&sCurrTmDatas,\ \&sCurrTimerTm);}
+\DoxyCodeLine{00448\ \textcolor{preprocessor}{\ \ \ \ \#endif}}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sCurrTmDatas;}
+\DoxyCodeLine{00450\ \ \ \ \ \}}
+\DoxyCodeLine{00451\ }
+\DoxyCodeLine{00452\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00453\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00454\ \ \ \ \ \textcolor{comment}{//\ Section\ Name:\ Private\ Members\ @\{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +}}
+\DoxyCodeLine{00455\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00456\ \ \ \ \ std::wofstream\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogFileStream;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00457\ \ \ \ \ std::mutex\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pLogWriteMutex;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00458\ \ \ \ \ std::queue<LightLogWriteInfo>\ \ pLogWriteQueue;\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00459\ \ \ \ \ std::condition\_variable\ \ \ \ \ \ \ \ \ pWrittenCondVar;\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00460\ \ \ \ \ std::thread\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sWrittenThreads;\ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00461\ \ \ \ \ std::atomic<bool>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bIsStopLogging;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00462\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sLogLastingDir;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00463\ \ \ \ \ std::wstring\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sLogsBasedName;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00464\ \ \ \ \ std::atomic<bool>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bHasLogLasting;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00465\ \ \ \ \ std::atomic<bool>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bLastingTmTags;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00466\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ kMaxQueueSize;\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00467\ \ \ \ \ \mbox{\hyperlink{_light_log_write_impl_8hpp_a621fde7e52afe10f6c5980f003cb8d30}{LogQueueOverflowStrategy}}\ \ \ \ \ \ \ \ queueFullStrategy;\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00468\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ discardCount;\ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00469\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ lastReportedDiscardCount;\ \ }
+\DoxyCodeLine{00470\ \ \ \ \ std::atomic<size\_t>\ \ \ \ \ \ \ \ \ \ \ \ \ reportInterval;\ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00471\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00472\ \ \ \ \ \textcolor{comment}{//\ @\}\ End\ of\ Private\ Members\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +}}
+\DoxyCodeLine{00473\ \ \ \ \ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00474\ \};}
+\DoxyCodeLine{00475\ }
+\DoxyCodeLine{00476\ }
+\DoxyCodeLine{00477\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ !INCLUDE\_LIGHTLOGWRITEIMPL\_HPP\_}}
+
+\end{DoxyCode}
