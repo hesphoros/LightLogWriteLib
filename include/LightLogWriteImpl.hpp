@@ -1,10 +1,12 @@
-﻿/*****************************************************************************
+﻿#ifndef INCLUDE_LIGHTLOGWRITEIMPL_HPP_
+#define INCLUDE_LIGHTLOGWRITEIMPL_HPP_
+/*****************************************************************************
  *  LightLogWriteImpl
  *  Copyright (C) 2025 hesphoros <hesphoros@gmail.com>
  *
  *  This file is part of LightLogWriteImpl.
  *
- *  This program is free software; you can redistribute it and/or modify
+ *  This program is free software; you can redistribute it d:\codespace\LightLogWriteImpl\include\LightLogWriteImpl.hppand/or modify
  *  it under the terms of the GNU General Public License version 3 as
  *  published by the Free Software Foundation.
  *
@@ -25,12 +27,13 @@
  *---------------------------------------------------------------------------*
  *  Change History :
  *  <Date>     | <Version> | <Author>       | <Description>
- *  2025/05/27 | 1.0.0.1   | hesphoros      | Create file
+ *  2025/03/27 | 1.0.0.1   | hesphoros      | Create file
  *****************************************************************************/
 
 #ifdef _MSC_VER
 #pragma execution_character_set("utf-8")
 #endif
+
 
 #include <iostream>
 #include <fstream>
@@ -205,8 +208,7 @@ public:
 		SetLogsFileName(Utf8ConvertsToUcs4(sFilename));
 	}
 
-	void SetLogsFileName(const std::u16string& sFilename)
-	{
+	void SetLogsFileName(const std::u16string& sFilename) {
 		SetLogsFileName(U16StringToWString(sFilename));
 	}
 
@@ -220,20 +222,17 @@ public:
 		* * If the directory does not exist, it will be created.
 		* @note This function should be called before writing any logs to ensure that the logs are stored correctly.
 		*/
-	void SetLastingsLogs(const std::wstring& sFilePath, const std::wstring& sBaseName)
-	{
+	void SetLastingsLogs(const std::wstring& sFilePath, const std::wstring& sBaseName) {
 		sLogLastingDir = sFilePath;
 		sLogsBasedName = sBaseName;
 		bHasLogLasting = true;
 		CreateLogsFile();
 	}
 
-	void SetLastingsLogs(const std::u16string& sFilePath, const std::u16string& sBaseName)
-	{
+	void SetLastingsLogs(const std::u16string& sFilePath, const std::u16string& sBaseName) {
 		SetLastingsLogs(U16StringToWString(sFilePath), U16StringToWString(sBaseName));
 	}
-	void SetLastingsLogs(const std::string& sFilePath, const std::string& sBaseName)
-	{
+	void SetLastingsLogs(const std::string& sFilePath, const std::string& sBaseName) {
 		SetLastingsLogs(Utf8ConvertsToUcs4(sFilePath), Utf8ConvertsToUcs4(sBaseName));
 	}
 
@@ -244,14 +243,12 @@ public:
 		* @details This function writes a log message with a specific type to the log file.
 		* It will also handle log overflow according to the specified strategy.
 		*/
-	void WriteLogContent(const std::wstring& sTypeVal, const std::wstring& sMessage)
-	{
+	void WriteLogContent(const std::wstring& sTypeVal, const std::wstring& sMessage) {
 		bool bNeedReport = false;
 		size_t currentDiscard = 0;
 		static thread_local bool inErrorReport = false;
 
-		if (queueFullStrategy == LogQueueOverflowStrategy::Block)
-		{
+		if (queueFullStrategy == LogQueueOverflowStrategy::Block) {
 			std::unique_lock<std::mutex> sWriteLock(pLogWriteMutex);
 			// std::wcerr << L"[WriteLogContent] Try push (Block), queue size: " <<
 			// pLogWriteQueue.size() << std::endl;
@@ -260,19 +257,16 @@ public:
 			// std::wcerr << L"[WriteLogContent] Pushed (Block), queue size: " <<
 			// pLogWriteQueue.size() << std::endl;
 		}
-		else if (queueFullStrategy == LogQueueOverflowStrategy::DropOldest)
-		{
+		else if (queueFullStrategy == LogQueueOverflowStrategy::DropOldest) {
 			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);
 			// std::wcerr << L"[WriteLogContent] Try push (DropOldest), queue size: " <<
 			// pLogWriteQueue.size() << std::endl;
-			if (pLogWriteQueue.size() >= kMaxQueueSize)
-			{
+			if (pLogWriteQueue.size() >= kMaxQueueSize) {
 				// std::wcerr << L"[WriteLogContent] Drop oldest, queue full: " <<
 				// pLogWriteQueue.size() << std::endl;
 				pLogWriteQueue.pop();
 				++discardCount;
-				if (discardCount - lastReportedDiscardCount >= reportInterval)
-				{
+				if (discardCount - lastReportedDiscardCount >= reportInterval) {
 					bNeedReport = true;
 					currentDiscard = discardCount;
 					lastReportedDiscardCount.store(discardCount.load());
@@ -283,8 +277,7 @@ public:
 			// pLogWriteQueue.size() << std::endl;
 		}
 		pWrittenCondVar.notify_one();
-		if (bNeedReport && !inErrorReport)
-		{
+		if (bNeedReport && !inErrorReport) {
 			inErrorReport = true;
 			std::wstring overflowMsg = L"The log queue overflows and has been discarded " + std::to_wstring(currentDiscard) + L" logs";
 			// std::wcerr << L"[WriteLogContent] Report overflow: " << overflowMsg << std::endl;
@@ -293,13 +286,11 @@ public:
 		}
 	}
 
-	void WriteLogContent(const std::string& sTypeVal, const std::string& sMessage)
-	{
+	void WriteLogContent(const std::string& sTypeVal, const std::string& sMessage) {
 		WriteLogContent(Utf8ConvertsToUcs4(sTypeVal), Utf8ConvertsToUcs4(sMessage));
 	}
 
-	void WriteLogContent(const std::u16string& sTypeVal, const std::u16string& sMessage)
-	{
+	void WriteLogContent(const std::u16string& sTypeVal, const std::u16string& sMessage) {
 		WriteLogContent(U16StringToWString(sTypeVal), U16StringToWString(sMessage));
 	}
 
@@ -309,8 +300,7 @@ public:
 		* @retval size_t The number of log messages that have been discarded due to overflow
 		* @details This function returns the current count of discarded log messages.
 		*/
-	size_t GetDiscardCount() const
-	{
+	size_t GetDiscardCount() const {
 		return discardCount;
 	}
 
@@ -320,8 +310,7 @@ public:
 		* * It can be useful for clearing the count after handling or reporting the discarded logs.
 		* @note This function does not affect the log messages themselves, only the count of discarded messages.
 		*/
-	void ResetDiscardCount()
-	{
+	void ResetDiscardCount() {
 		discardCount = 0;
 	}
 
@@ -332,8 +321,7 @@ private:
 		* @details This function constructs the log file name using the current date and time.
 		* * The format is "BaseName_YYYY_MM_DD_AM/PM.log", where BaseName is the base name set by SetLastingsLogs.
 		*/
-	std::wstring BuildLogFileOut()
-	{
+	std::wstring BuildLogFileOut() {
 		std::tm sTmPartsInfo = GetCurrsTimerTm();
 		std::wostringstream sWosStrStream;
 
@@ -354,8 +342,7 @@ private:
 	* * It also writes a final log entry indicating that the logging has stopped.
 	* @note It is important to call this function to ensure that all logs are flushed and the thread is properly terminated.
 	*/
-	void CloseLogStream()
-	{
+	void CloseLogStream() {
 		bIsStopLogging = true;
 		pWrittenCondVar.notify_all();
 		WriteLogContent(L"<================================              Stop log write thread    ", L"================================>");
@@ -369,8 +356,7 @@ private:
 		* * checks if the directory exists, and opens the log file stream for appending.
 		* * If the directory does not exist, it will be created.
 		*/
-	void CreateLogsFile()
-	{
+	void CreateLogsFile() {
 		std::wstring sOutFileName = BuildLogFileOut();
 		std::lock_guard<std::mutex> sLock(pLogWriteMutex);
 		ChecksDirectory(sOutFileName);
@@ -386,30 +372,27 @@ private:
 		* * The thread will exit when the stop flag is set and the queue is empty.
 		* @note This function should be called in a separate thread to avoid blocking the main application.
 		*/
-	void RunWriteThread()
-	{
-		while (true)
-		{
+	void RunWriteThread() {
+		while (true) {
 			if (bHasLogLasting)
 				if (bLastingTmTags != (GetCurrsTimerTm().tm_hour > 12))
 					CreateLogsFile();
 			LightLogWriteInfo sLogMessageInf;
-			{
+
+			 {
 				auto sLock = std::unique_lock<std::mutex>(pLogWriteMutex);
 				pWrittenCondVar.wait(sLock, [this]
 					{ return !pLogWriteQueue.empty() || bIsStopLogging; });
 
 				if (bIsStopLogging && pLogWriteQueue.empty())
 					break; // 如果停止标志为真且队列为空，则退出线程
-				if (!pLogWriteQueue.empty())
-				{
+				if (!pLogWriteQueue.empty()) {
 					sLogMessageInf = pLogWriteQueue.front();
 					pLogWriteQueue.pop();
 					pWrittenCondVar.notify_one();
 				}
-			}
-			if (!sLogMessageInf.sLogContentVal.empty() && pLogFileStream.is_open())
-			{
+			 }
+			if (!sLogMessageInf.sLogContentVal.empty() && pLogFileStream.is_open()) {
 				pLogFileStream << sLogMessageInf.sLogTagNameVal << L"-//>>>" << GetCurrentTimer() << " : " << sLogMessageInf.sLogContentVal << "\n";
 			}
 		}
@@ -423,8 +406,7 @@ private:
 		* @details This function checks if the directory of the specified log file exists.
 		* * If the directory does not exist, it will create all necessary directories.
 		*/
-	void ChecksDirectory(const std::wstring& sFilename)
-	{
+	void ChecksDirectory(const std::wstring& sFilename) {
 		std::filesystem::path sFullFileName(sFilename);
 		std::filesystem::path sOutFilesPath = sFullFileName.parent_path();
 		if (!sOutFilesPath.empty() && !std::filesystem::exists(sOutFilesPath))
@@ -438,8 +420,7 @@ private:
 		* @details This function retrieves the current system time and formats it into a wstring.
 		* * The format used is "YYYY-MM-DD HH:MM:SS", which is suitable for logging purposes.
 		*/
-	std::wstring GetCurrentTimer() const
-	{
+	std::wstring GetCurrentTimer() const {
 		std::tm sTmPartsInfo = GetCurrsTimerTm();
 		std::wostringstream sWosStrStream;
 		sWosStrStream << std::put_time(&sTmPartsInfo, L"%Y-%m-%d %H:%M:%S");
@@ -456,8 +437,7 @@ private:
 		* @retval std::tm The current time as a tm structure
 		* @version 1.0.0
 		*/
-	std::tm GetCurrsTimerTm() const
-	{
+	std::tm GetCurrsTimerTm() const {
 		auto sCurrentTime = std::chrono::system_clock::now();
 		std::time_t sCurrTimerTm = std::chrono::system_clock::to_time_t(sCurrentTime);
 		std::tm sCurrTmDatas;
@@ -492,3 +472,6 @@ private:
 	// @} End of Private Members                                                                     +
 	//------------------------------------------------------------------------------------------------
 };
+
+
+#endif // !INCLUDE_LIGHTLOGWRITEIMPL_HPP_
