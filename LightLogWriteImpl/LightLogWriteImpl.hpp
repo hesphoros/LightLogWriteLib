@@ -94,7 +94,7 @@ enum class LogQueueOverflowStrategy {
 	* @return A wide string (std::wstring) representing the UCS-4 encoded string
 	* @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
 	*/
-static inline std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
+std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
 	try {
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 		return converter.from_bytes(utf8str);
@@ -110,7 +110,7 @@ static inline std::wstring Utf8ConvertsToUcs4(const std::string& utf8str) {
 	* @return A UTF-8 encoded string (std::string) representing the converted wide string
 	* @details This function uses std::wstring_convert with std::codecvt_utf8<wchar_t> to perform the conversion.
 	*/
-static inline std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
+std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
 	try {
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 		return converter.to_bytes(wstr);
@@ -126,7 +126,7 @@ static inline std::string Ucs4ConvertToUtf8(const std::wstring& wstr) {
 	* @return A wide string (std::wstring) representing the UCS-4 encoded string
 	* @details This function uses std::wstring_convert with std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian> to perform the conversion.
 	*/
-static inline std::wstring U16StringToWString(const std::u16string& u16str) {
+std::wstring U16StringToWString(const std::u16string& u16str) {
 	std::wstring wstr;
 #ifdef _WIN32
 	wstr.assign(u16str.begin(), u16str.end());

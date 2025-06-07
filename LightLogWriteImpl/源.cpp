@@ -51,13 +51,25 @@ double MeasureLogPerformance(const std::wstring& testName, const std::wstring& o
 	return durationSec;
 }
 
+
+class LightLogWrite_Impl glog;
+
+void test() {
+	
+	std::wstring utf8wstr = L"你好 世界 Hello World!";
+	glog.SetLastingsLogs("log", "test-log");
+	//glog.WriteLogContent(L"TestTag", utf8wstr);
+}
+
+
 int main()
 {
-	// 测试 LightLogWriteImpl 性能
-	double timeLightLog = MeasureLogPerformance<LightLogWrite_Impl>(
-		L"LightLogWriteImpl",
-		L"LightLogWriteImpl_result.log"
-	);
+	test();
+	//// 测试 LightLogWriteImpl 性能
+	//double timeLightLog = MeasureLogPerformance<LightLogWrite_Impl>(
+	//	L"LightLogWriteImpl",
+	//	L"LightLogWriteImpl_result.log"
+	//);
 
 	   //// 测试 LockFreeLogWriteImpl 性能
 	   //double timeLockFree = MeasureLogPerformance<LockFreeLogWriteImpl>(
@@ -79,6 +91,6 @@ int main()
 	   //		<< (timeLockFree - timeLightLog) << L" seconds." << std::endl;
 	   //}
 
-	std::wcout << L"Note: Actual performance may vary depending on environment and log specifics.\n";
+	
 	return 0;
 }

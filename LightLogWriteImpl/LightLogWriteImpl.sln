@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36121.58 d17.14
+VisualStudioVersion = 17.14.36202.13 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LightLogWriteImpl", "LightLogWriteImpl.vcxproj", "{77585114-12A2-4E5B-971C-F931862B1B7B}"
 EndProject
@@ -26,6 +26,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {63C0D82A-7F9A-432D-A565-191B58C55FD4}
+		SolutionGuid = {6BC7DD5D-B74F-4853-9BE7-831E4D10F927}
 	EndGlobalSection
 EndGlobal

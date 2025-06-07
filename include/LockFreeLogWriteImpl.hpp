@@ -1,3 +1,33 @@
+/*****************************************************************************
+ *  LockFreeLogWriteImpl
+ *  Copyright (C) 2025 hesphoros <hesphoros@gmail.com>
+ *
+ *  This file is part of LockFreeLogWriteImpl.
+ *
+ *  This program is free software; you can redistribute it LightLogWriteImpl.hppand/or modify
+ *  it under the terms of the GNU General Public License version 3 as
+ *  published by the Free Software Foundation.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  @file     LightLogWriteImpl.hpp
+ *  @brief    有锁实现的轻量级的日志库
+ *  @details  详细描述
+ *
+ *  @author   hesphoros
+ *  @email    hesphoros@gmail.com
+ *  @version  1.0.0.1
+ *  @date     2025/05/27
+ *  @license  GNU General Public License (GPL)
+ *---------------------------------------------------------------------------*
+ *  Remark         : None
+ *---------------------------------------------------------------------------*
+ *  Change History :
+ *  <Date>     | <Version> | <Author>       | <Description>
+ *  2025/03/27 | 1.0.0.1   | hesphoros      | Create file
+ *****************************************************************************/
+
 #ifndef LOCK_FREE_LOG_WRITE_IMPL_HPP
 #define LOCK_FREE_LOG_WRITE_IMPL_HPP
 
@@ -230,8 +260,7 @@ public:
 		queueFullStrategy(strategy),
 		reportInterval(reportInterval),
 		bHasLogLasting{ false },
-		pLogWriteQueue(maxQueueSize)
-	{
+		pLogWriteQueue(maxQueueSize) {
 		sWrittenThreads = std::thread(&LockFreeLogWriteImpl::RunWriteThread, this);
 	}
 
@@ -388,8 +417,7 @@ private:
 	void ChecksDirectory(const std::wstring& sFilename) {
 		std::filesystem::path sFullFileName(sFilename);
 		std::filesystem::path sOutFilesPath = sFullFileName.parent_path();
-		if (!sOutFilesPath.empty() && !std::filesystem::exists(sOutFilesPath))
-		{
+		if (!sOutFilesPath.empty() && !std::filesystem::exists(sOutFilesPath)) {
 			std::filesystem::create_directories(sOutFilesPath);
 		}
 	}
@@ -440,4 +468,4 @@ private:
 
 
 
-#endif //  !LOCK_FREE_LOG_WRITE_IMPL_HPP
+#endif // !LOCK_FREE_LOG_WRITE_IMPL_HPP
