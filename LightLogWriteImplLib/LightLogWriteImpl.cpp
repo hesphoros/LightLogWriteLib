@@ -156,6 +156,7 @@ void LightLogWrite_Impl::CreateLogsFile()
 	ChecksDirectory(sOutFileName);
 	pLogFileStream.close(); 
 	pLogFileStream.open(sOutFileName, std::ios::app);
+	pLogFileStream.imbue(std::locale(std::locale(), new std::codecvt_utf8_utf16<wchar_t>));
 }
 
 void LightLogWrite_Impl::RunWriteThread()

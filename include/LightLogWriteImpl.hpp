@@ -252,10 +252,12 @@ public:
 			std::unique_lock<std::mutex> sWriteLock(pLogWriteMutex);
 			// std::wcerr << L"[WriteLogContent] Try push (Block), queue size: " <<
 			// pLogWriteQueue.size() << std::endl;
-			pWrittenCondVar.wait(sWriteLock, [this] { return pLogWriteQueue.size() < kMaxQueueSize; });
-			pLogWriteQueue.push({ sTypeVal, sMessage });
-			// std::wcerr << L"[WriteLogContent] Pushed (Block), queue size: " <<
-			// pLogWriteQueue.size() << std::endl;
+			pWrittenCondVar.wait(sWriteLock, [this] { return pLogWriteQueue.size() < kMaxQueueSize || bIsStopLogging; });
+			if (!bIsStopLogging) {
+				pLogWriteQueue.push({ sTypeVal, sMessage });
+				// std::wcerr << L"[WriteLogContent] Pushed (Block), queue size: " <<
+				// pLogWriteQueue.size() << std::endl;
+			}
 		}
 		else if (queueFullStrategy == LogQueueOverflowStrategy::DropOldest) {
 			std::lock_guard<std::mutex> sWriteLock(pLogWriteMutex);

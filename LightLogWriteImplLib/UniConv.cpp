@@ -29,7 +29,6 @@
 *****************************************************************************/
 #include "UniConv.h"
 #include "LightLogWriteImpl.h"
-#include "pch.h"
 
 
 
@@ -50,6 +49,8 @@ const std::unordered_map<int, std::string_view> UniConv::m_iconvErrorMap = {
 	{EINTR,  "Conversion interrupted by signal"},
 	{ENOMEM, "Out of memory"}
 };
+
+std::string UniConv::m_defaultEncoding = {}; // Default encoding, can be set by user
 
 /**************************  === UniConv m_encodingMap ===  ***************************/
 const std::unordered_map<std::uint16_t, UniConv::EncodingInfo> UniConv::m_encodingMap = {
@@ -212,9 +213,17 @@ const std::unordered_map<std::string, std::uint16_t> UniConv::m_encodingToCodePa
 std::unordered_map<std::string, UniConv::IconvSharedPtr> UniConv::m_iconvDescriptorCacheMapS = {};
 
 
+void UniConv::SetDefaultEncoding(const std::string& encoding)
+{
+    this->m_defaultEncoding = encoding;
+}
+
 // ===================== System encoding related functions =====================
 std::string UniConv::GetCurrentSystemEncoding()
 {
+    if(!m_defaultEncoding.empty()) {
+        return m_defaultEncoding;
+    }
 	std::stringstream ss;
 #ifdef _WIN32
 	UINT codePage = GetACP();
@@ -606,10 +615,19 @@ std::u16string UniConv::ToUtf16LEFromUtf16BE(const char16_t* input) {
 }
 
 std::wstring UniConv::LocaleToWideString(const std::string& sInput) {
-	if (sInput.empty()) return std::wstring{};
-	std::string currentEncoding = this->GetCurrentSystemEncoding();
-	auto result = this->ConvertEncoding(sInput, currentEncoding.c_str(), ToString(Encoding::utf_16le).c_str());
-	return result.IsSuccess() ? std::wstring(reinterpret_cast<const wchar_t*>(result.conv_result_str.data()), result.conv_result_str.size() / sizeof(wchar_t)) : std::wstring{};
+    if (sInput.empty()) return std::wstring{};
+    std::string currentEncoding = this->GetCurrentSystemEncoding();
+    auto result = this->ConvertEncoding(sInput, currentEncoding.c_str(), ToString(Encoding::utf_16le).c_str());
+    if (!result.IsSuccess()) return std::wstring{};
+    // 去除 BOM（如果有）
+    const char* data = result.conv_result_str.data();
+    size_t size = result.conv_result_str.size();
+    if (size >= 2 && (uint8_t)data[0] == 0xFF && (uint8_t)data[1] == 0xFE) {
+        data += 2;
+        size -= 2;
+    }
+    return std::wstring(reinterpret_cast<const wchar_t*>(data), size / sizeof(wchar_t));
+
 }
 
 std::wstring UniConv::LocaleToWideString(const char* sInput) {
@@ -797,7 +815,7 @@ std::wstring UniConv::Utf8ConvertsToUcs4(const std::string& utf8str)
 {
 	if (utf8str.empty()) return std::wstring{};
     // Convert UTF-8 to UCS-4 (wide string)
-    auto result = ConvertEncoding(utf8str, ToString(Encoding::utf_8).c_str(), ToString(Encoding::wchar_t_encoding).c_str());
+    auto result = ConvertEncoding(utf8str, ToString(Encoding::utf_8).c_str(), ToString(Encoding::utf_16le).c_str());
     if (result.IsSuccess() && result.conv_result_str.size() % sizeof(wchar_t) == 0) {
         return std::wstring(reinterpret_cast<const wchar_t*>(result.conv_result_str.data()), 
                             result.conv_result_str.size() / sizeof(wchar_t));
